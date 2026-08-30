@@ -68,7 +68,7 @@ export default function OpportunityDetailPage({
         alert(
           `Opportunity approved! Payment Intent: ${data.data.paymentIntentId}`
         );
-        router.push("/dashboard/payments");
+        router.push("/payments");
       } else {
         setError(data.error?.message || "Failed to approve");
       }
