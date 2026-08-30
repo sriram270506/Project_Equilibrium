@@ -2,7 +2,7 @@
 
 ## How to use this file
 
-Copy everything from the next heading into VS Code’s Generative AI Agent. The agent must treat this document as the authoritative specification. It must not invent additional modules, change the architecture, add unnecessary infrastructure, or claim a feature is complete without implementing and testing it.
+The agent must treat this document as the authoritative specification. It must not invent additional modules, change the architecture, add unnecessary infrastructure, or claim a feature is complete without implementing and testing it.
 
 ---
 

@@ -1,0 +1,261 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Supplier {
+  id                    String                    @id
+  name                  String
+  email                 String
+  riskTier              String
+  createdAt             DateTime                  @default(now())
+  liquidityObservations LiquidityObservation[]
+  opportunities         LiquidityOpportunity[]
+  payments              PaymentIntent[]
+  auditEvents           AuditEvent[]
+
+  @@index([riskTier])
+}
+
+model LiquidityObservation {
+  id                  String   @id
+  supplierId          String
+  supplier            Supplier @relation(fields: [supplierId], references: [id])
+  observedAt          DateTime
+  availableBalancePaise Int
+  inflowPaise         Int
+  outflowPaise        Int
+  daysRunway          Float
+  paymentRegularity   Float
+  volatility          Float
+  source              String   // DEMO_SYNTHETIC or AA_SANDBOX
+
+  @@index([supplierId, observedAt])
+}
+
+model LiquidityOpportunity {
+  id                      String   @id
+  supplierId              String
+  supplier                Supplier @relation(fields: [supplierId], references: [id])
+  predictionProbability   Float
+  modelVersion            String
+  featureSnapshotJson     String
+  policyVersion           String
+  expectedBenefitPaise    Int
+  opportunityCostPaise    Int
+  riskCostPaise           Int
+  expectedValuePaise      Int
+  recommendedDiscountBps  Int
+  maxAllowedDiscountPaise Int
+  status                  String   // RECOMMENDED, APPROVED, REJECTED, EXECUTED, EXPIRED
+  decisionReason          String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([status])
+  @@index([supplierId])
+}
+
+model PaymentIntent {
+  id                      String   @id
+  internalReference       String   @unique
+  provider                String   @default("RAZORPAY")
+  providerPaymentId       String?
+  providerOrderId         String?
+  operationType           String   // DISCOUNT_PAYOUT, ESCROW_HOLD, ESCROW_RELEASE, REFUND
+  amountPaise             Int
+  currency                String   @default("INR")
+  status                  String   // INTENT_CREATED, SUBMITTED, ACKNOWLEDGED, UNKNOWN, CONFIRMED, FAILED, REVERSED, MANUAL_REVIEW
+  requestFingerprint      String
+  providerIdempotencyKey  String   @unique
+  correlationId           String
+  failureMode             String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  confirmedAt             DateTime?
+  supplierId              String
+  supplier                Supplier @relation(fields: [supplierId], references: [id])
+  ledgerTransactions      LedgerTransaction[]
+  outboxEvents            OutboxEvent[]
+  eventRecords            EventRecord[]
+  reconciliationCases     ReconciliationCase[]
+
+  @@index([status])
+  @@index([supplierId])
+  @@index([correlationId])
+}
+
+model LedgerTransaction {
+  id              String         @id
+  referenceType   String
+  referenceId     String
+  currency        String
+  description     String
+  createdAt       DateTime       @default(now())
+  paymentIntentId String?
+  paymentIntent   PaymentIntent? @relation(fields: [paymentIntentId], references: [id])
+  entries         LedgerEntry[]
+
+  @@index([referenceType, referenceId])
+}
+
+model LedgerEntry {
+  id              String            @id
+  transactionId   String
+  transaction     LedgerTransaction @relation(fields: [transactionId], references: [id])
+  accountCode     String
+  debitPaise      Int
+  creditPaise     Int
+  createdAt       DateTime          @default(now())
+
+  @@index([transactionId])
+}
+
+model OutboxEvent {
+  id              String   @id
+  eventType       String
+  aggregateType   String
+  aggregateId     String
+  payloadJson     String
+  status          String   @default("PENDING") // PENDING, PUBLISHED, FAILED
+  attemptCount    Int      @default(0)
+  availableAt     DateTime @default(now())
+  lastError       String?
+  correlationId   String
+  createdAt       DateTime @default(now())
+  publishedAt     DateTime?
+  paymentIntentId String?
+  paymentIntent   PaymentIntent? @relation(fields: [paymentIntentId], references: [id])
+
+  @@index([status, availableAt])
+}
+
+model EventRecord {
+  id              String   @id
+  eventType       String
+  aggregateType   String
+  aggregateId     String
+  sequenceNumber  Int
+  schemaVersion   String
+  payloadJson     String
+  source          String
+  idempotencyKey  String   @unique
+  correlationId   String
+  createdAt       DateTime @default(now())
+  paymentIntentId String?
+  paymentIntent   PaymentIntent? @relation(fields: [paymentIntentId], references: [id])
+
+  @@index([aggregateType, aggregateId, sequenceNumber])
+}
+
+model AuditEvent {
+  id              String   @id
+  eventType       String
+  actorType       String   // SYSTEM, OPERATOR, PROVIDER, MODEL
+  actorId         String
+  aggregateType   String
+  aggregateId     String
+  payloadJson     String
+  modelVersion    String?
+  policyVersion   String?
+  correlationId   String
+  createdAt       DateTime @default(now())
+  supplierId      String?
+  supplier        Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@index([aggregateType, aggregateId])
+  @@index([createdAt])
+}
+
+model DisputeCase {
+  id                  String   @id
+  providerDisputeId   String
+  paymentIntentId     String?
+  reasonCode          String
+  amountPaise         Int
+  status              String   // OPEN, DRAFT_READY, NEEDS_REVIEW, SUBMITTED, CLOSED
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  evidenceDocuments   EvidenceDocument[]
+  evidenceClaims      EvidenceClaim[]
+  disputeDrafts       DisputeDraft[]
+}
+
+model EvidenceDocument {
+  id              String   @id
+  disputeCaseId   String
+  disputeCase     DisputeCase @relation(fields: [disputeCaseId], references: [id])
+  documentType    String
+  title           String
+  content         String
+  trustedSource   Boolean
+  createdAt       DateTime @default(now())
+  evidenceClaims  EvidenceClaim[]
+}
+
+model EvidenceClaim {
+  id                String   @id
+  disputeCaseId     String
+  disputeCase       DisputeCase @relation(fields: [disputeCaseId], references: [id])
+  claimText         String
+  normalizedField   String
+  normalizedValue   String
+  confidence        Float
+  sourceDocumentId  String
+  sourceDocument    EvidenceDocument @relation(fields: [sourceDocumentId], references: [id])
+  sourceSpan        String
+  isContradiction   Boolean
+  createdAt         DateTime @default(now())
+}
+
+model DisputeDraft {
+  id                 String   @id
+  disputeCaseId      String
+  disputeCase        DisputeCase @relation(fields: [disputeCaseId], references: [id])
+  draftText          String
+  claimIdsJson       String
+  validationStatus   String   // PASSED, FAILED, NEEDS_REVIEW
+  validationErrorsJson String?
+  createdBy          String
+  createdAt          DateTime @default(now())
+}
+
+model ReconciliationCase {
+  id                  String   @id
+  paymentIntentId     String?
+  paymentIntent       PaymentIntent? @relation(fields: [paymentIntentId], references: [id])
+  providerReference   String?
+  outcome             String   // MATCHED, MISSING_INTERNAL, MISSING_EXTERNAL, AMOUNT_MISMATCH, STATUS_MISMATCH, DUPLICATE
+  severity            String   // INFO, WARNING, CRITICAL
+  status              String   // OPEN, INVESTIGATING, RESOLVED, FROZEN
+  internalAmountPaise Int?
+  externalAmountPaise Int?
+  notes               String?
+  correlationId       String
+  createdAt           DateTime @default(now())
+  resolvedAt          DateTime?
+}
+
+model DemoScenario {
+  id          String   @id
+  name        String
+  description String
+  status      String
+  createdAt   DateTime @default(now())
+}
+
+model MockProviderRecord {
+  id              String   @id
+  providerPaymentId String @unique
+  providerOrderId String?
+  amountPaise     Int
+  status          String
+  failureMode     String?
+  webhookSent     Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
