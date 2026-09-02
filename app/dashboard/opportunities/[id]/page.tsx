@@ -106,7 +106,7 @@ export default function OpportunityDetailPage({
             <h1 className="text-3xl font-bold mb-2">
               {opportunity.supplier.name}
             </h1>
-            <p className="text-slate-600">{opportunity.supplier.email}</p>
+            <p className="text-slate-700 font-medium">{opportunity.supplier.email}</p>
           </div>
           <span
             className={`px-4 py-2 rounded-full text-lg font-semibold ${
@@ -130,13 +130,13 @@ export default function OpportunityDetailPage({
             <h2 className="text-xl font-semibold mb-4">Model Prediction</h2>
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-slate-600">Probability</p>
+                <p className="text-sm text-slate-700 font-medium">Probability</p>
                 <p className="text-2xl font-bold text-emerald-600">
                   {(opportunity.predictionProbability * 100).toFixed(1)}%
                 </p>
               </div>
               <div>
-                <p className="text-sm text-slate-600">Model Version</p>
+                <p className="text-sm text-slate-700 font-medium">Model Version</p>
                 <p className="text-sm font-mono">{opportunity.modelVersion}</p>
               </div>
             </div>
@@ -146,13 +146,13 @@ export default function OpportunityDetailPage({
             <h2 className="text-xl font-semibold mb-4">Economic Analysis</h2>
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-slate-600">Expected Value</p>
+                <p className="text-sm text-slate-700 font-medium">Expected Value</p>
                 <p className="text-2xl font-bold text-emerald-600">
                   {formatPaise(opportunity.expectedValuePaise)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-slate-600">Discount Recommended</p>
+                <p className="text-sm text-slate-700 font-medium">Discount Recommended</p>
                 <p className="text-lg font-semibold">
                   {opportunity.recommendedDiscountBps} bps (1-{opportunity.recommendedDiscountBps / 100}%)
                 </p>
@@ -165,25 +165,25 @@ export default function OpportunityDetailPage({
           <h2 className="text-lg font-semibold mb-4">Policy Evaluation</h2>
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <p className="text-sm text-slate-600">Expected Benefit</p>
+              <p className="text-sm text-slate-700 font-medium">Expected Benefit</p>
               <p className="text-lg font-semibold">
                 {formatPaise(opportunity.expectedBenefitPaise)}
               </p>
             </div>
             <div>
-              <p className="text-sm text-slate-600">Opportunity Cost</p>
+              <p className="text-sm text-slate-700 font-medium">Opportunity Cost</p>
               <p className="text-lg font-semibold">
                 {formatPaise(opportunity.opportunityCostPaise)}
               </p>
             </div>
             <div>
-              <p className="text-sm text-slate-600">Risk Cost</p>
+              <p className="text-sm text-slate-700 font-medium">Risk Cost</p>
               <p className="text-lg font-semibold">
                 {formatPaise(opportunity.riskCostPaise)}
               </p>
             </div>
             <div>
-              <p className="text-sm text-slate-600">Max Allowed Discount</p>
+              <p className="text-sm text-slate-700 font-medium">Max Allowed Discount</p>
               <p className="text-lg font-semibold">
                 {formatPaise(opportunity.maxAllowedDiscountPaise)}
               </p>

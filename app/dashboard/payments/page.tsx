@@ -105,11 +105,11 @@ export default function PaymentsPage() {
 
               <div className="grid grid-cols-4 gap-4 mb-4 text-sm">
                 <div>
-                  <p className="text-slate-600">Provider</p>
+                  <p className="text-slate-700 font-medium">Provider</p>
                   <p className="font-semibold">{payment.provider}</p>
                 </div>
                 <div>
-                  <p className="text-slate-600">Provider ID</p>
+                  <p className="text-slate-700 font-medium">Provider ID</p>
                   <p className="font-mono text-xs">
                     {payment.providerPaymentId
                       ? payment.providerPaymentId.slice(0, 20) + "..."
@@ -117,13 +117,13 @@ export default function PaymentsPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-600">Correlation ID</p>
+                  <p className="text-slate-700 font-medium">Correlation ID</p>
                   <p className="font-mono text-xs">
                     {payment.correlationId.slice(0, 20)}...
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-600">Created</p>
+                  <p className="text-slate-700 font-medium">Created</p>
                   <p>
                     {new Date(payment.createdAt).toLocaleDateString("en-IN")}
                   </p>

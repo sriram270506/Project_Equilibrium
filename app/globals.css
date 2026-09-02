@@ -24,3 +24,13 @@ body {
     --background-end-rgb: 15, 23, 42;
   }
 }
+
+/* Improve contrast for labels and secondary text */
+.label-secondary {
+  @apply text-slate-700;
+}
+
+.detail-text {
+  @apply text-slate-800;
+}
+

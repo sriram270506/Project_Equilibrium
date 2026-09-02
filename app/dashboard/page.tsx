@@ -77,26 +77,26 @@ export default function DashboardPage() {
         <h2 className="text-lg font-semibold mb-4">System Status</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-sm text-slate-600">Status</p>
+            <p className="text-sm text-slate-700 font-medium">Status</p>
             <p className="text-lg font-semibold text-emerald-600">
               {health?.status || "Unknown"}
             </p>
           </div>
           <div>
-            <p className="text-sm text-slate-600">Provider Mode</p>
+            <p className="text-sm text-slate-700 font-medium">Provider Mode</p>
             <p className="text-lg font-semibold text-blue-600">
               {health?.provider || "Unknown"}
             </p>
           </div>
           <div>
-            <p className="text-sm text-slate-600">Application Mode</p>
+            <p className="text-sm text-slate-700 font-medium">Application Mode</p>
             <p className="text-lg font-semibold text-purple-600">
               {health?.mode || "Unknown"}
             </p>
           </div>
           <div>
-            <p className="text-sm text-slate-600">Timestamp</p>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-700 font-medium">Timestamp</p>
+            <p className="text-sm text-slate-800">
               {health?.timestamp ? new Date(health.timestamp).toLocaleString("en-IN") : "Unknown"}
             </p>
           </div>
@@ -106,32 +106,32 @@ export default function DashboardPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-slate-600 mb-2">Recommended Opportunities</p>
+          <p className="text-sm text-slate-700 font-medium mb-2">Recommended Opportunities</p>
           <p className="text-3xl font-bold text-slate-900">
             {dashboard?.kpis.recommendedOpportunities ?? 0}
           </p>
-          <p className="text-xs text-slate-500 mt-2">Ready for review</p>
+          <p className="text-xs text-slate-700 mt-2">Ready for review</p>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-slate-600 mb-2">Expected Value</p>
+          <p className="text-sm text-slate-700 font-medium mb-2">Expected Value</p>
           <p className="text-3xl font-bold text-emerald-600">
             {formatPaise(dashboard?.kpis.expectedValuePaise ?? 0)}
           </p>
-          <p className="text-xs text-slate-500 mt-2">Aggregated</p>
+          <p className="text-xs text-slate-700 mt-2">Aggregated</p>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-slate-600 mb-2">Active Payment Intents</p>
+          <p className="text-sm text-slate-700 font-medium mb-2">Active Payment Intents</p>
           <p className="text-3xl font-bold text-blue-600">
             {dashboard?.kpis.activePaymentIntents ?? 0}
           </p>
-          <p className="text-xs text-slate-500 mt-2">Confirmed</p>
+          <p className="text-xs text-slate-700 mt-2">Confirmed</p>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-slate-600 mb-2">Open Reconciliation</p>
+          <p className="text-sm text-slate-700 font-medium mb-2">Open Reconciliation</p>
           <p className="text-3xl font-bold text-amber-600">
             {dashboard?.kpis.openReconciliationCases ?? 0}
           </p>
-          <p className="text-xs text-slate-500 mt-2">Cases</p>
+          <p className="text-xs text-slate-700 mt-2">Cases</p>
         </div>
       </div>
 

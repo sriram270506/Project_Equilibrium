@@ -120,7 +120,7 @@ export default function ReconciliationPage() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h2 className="text-lg font-semibold">{c.outcome}</h2>
-                  <p className="text-sm text-slate-600">ID: {c.id}</p>
+                  <p className="text-sm text-slate-700 font-medium">ID: {c.id}</p>
                 </div>
                 <div className="flex gap-2">
                   <span
@@ -138,19 +138,19 @@ export default function ReconciliationPage() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <p className="text-sm text-slate-600">Internal Amount</p>
+                  <p className="text-sm text-slate-700 font-medium">Internal Amount</p>
                   <p className="text-lg font-semibold">
                     {c.internalAmount ? `₹${c.internalAmount / 100}` : "-"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600">External Amount</p>
+                  <p className="text-sm text-slate-700 font-medium">External Amount</p>
                   <p className="text-lg font-semibold">
                     {c.externalAmount ? `₹${c.externalAmount / 100}` : "-"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600">Resolved</p>
+                  <p className="text-sm text-slate-700 font-medium">Resolved</p>
                   <p className="text-sm">
                     {c.resolvedAt
                       ? new Date(c.resolvedAt).toLocaleDateString("en-IN")

@@ -81,7 +81,7 @@ export default function OpportunitiesPage() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h2 className="text-lg font-semibold">{opp.supplierName}</h2>
-                  <p className="text-sm text-slate-600">ID: {opp.id}</p>
+                  <p className="text-sm text-slate-700 font-medium">ID: {opp.id}</p>
                 </div>
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -96,19 +96,19 @@ export default function OpportunitiesPage() {
 
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div>
-                  <p className="text-sm text-slate-600">Probability</p>
+                  <p className="text-sm text-slate-700 font-medium">Probability</p>
                   <p className="text-lg font-semibold">
                     {(opp.predictionProbability * 100).toFixed(0)}%
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600">Expected Value</p>
+                  <p className="text-sm text-slate-700 font-medium">Expected Value</p>
                   <p className="text-lg font-semibold text-emerald-600">
                     {formatPaise(opp.expectedValuePaise)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600">Created</p>
+                  <p className="text-sm text-slate-700 font-medium">Created</p>
                   <p className="text-sm">
                     {new Date(opp.createdAt).toLocaleDateString("en-IN")}
                   </p>

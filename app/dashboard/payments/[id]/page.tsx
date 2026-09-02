@@ -89,7 +89,7 @@ export default function PaymentDetailPage({
       <div className="bg-white rounded-lg shadow p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">{payment.supplier.name}</h1>
-          <p className="text-slate-600">{payment.supplier.email}</p>
+          <p className="text-slate-700 font-medium">{payment.supplier.email}</p>
         </div>
 
         {error && (
@@ -120,12 +120,12 @@ export default function PaymentDetailPage({
             <h2 className="text-lg font-semibold mb-4">Provider Details</h2>
             <div className="space-y-2 text-sm">
               <p>
-                <span className="text-slate-600">Provider:</span>
+                <span className="text-slate-700 font-medium">Provider:</span>
                 <span className="font-semibold ml-2">{payment.provider}</span>
               </p>
               {payment.providerPaymentId && (
                 <p>
-                  <span className="text-slate-600">Payment ID:</span>
+                  <span className="text-slate-700 font-medium">Payment ID:</span>
                   <span className="font-mono text-xs ml-2">
                     {payment.providerPaymentId}
                   </span>
@@ -133,14 +133,14 @@ export default function PaymentDetailPage({
               )}
               {payment.providerOrderId && (
                 <p>
-                  <span className="text-slate-600">Order ID:</span>
+                  <span className="text-slate-700 font-medium">Order ID:</span>
                   <span className="font-mono text-xs ml-2">
                     {payment.providerOrderId}
                   </span>
                 </p>
               )}
               <p>
-                <span className="text-slate-600">Correlation ID:</span>
+                <span className="text-slate-700 font-medium">Correlation ID:</span>
                 <span className="font-mono text-xs ml-2">
                   {payment.correlationId}
                 </span>
@@ -159,7 +159,7 @@ export default function PaymentDetailPage({
                   className="border-l-4 border-blue-500 pl-4 py-2"
                 >
                   <p className="text-sm font-semibold">{event.eventType}</p>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-slate-700">
                     {new Date(event.timestamp).toLocaleString("en-IN")}
                   </p>
                   <p className="text-xs text-slate-700 mt-1">
@@ -185,9 +185,9 @@ export default function PaymentDetailPage({
                   <table className="w-full mt-2 text-sm">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left text-slate-600 font-medium">Account Code</th>
-                        <th className="text-right text-slate-600 font-medium">Debit</th>
-                        <th className="text-right text-slate-600 font-medium">Credit</th>
+                        <th className="text-left text-slate-700 font-semibold">Account Code</th>
+                        <th className="text-right text-slate-700 font-semibold">Debit</th>
+                        <th className="text-right text-slate-700 font-semibold">Credit</th>
                       </tr>
                     </thead>
                     <tbody>
