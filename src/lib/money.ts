@@ -1,7 +1,7 @@
 export function formatPaise(paise: number): string {
   assertValidPaise(paise);
   const rupees = paise / 100;
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "INR",
     minimumFractionDigits: 2,
@@ -34,11 +34,17 @@ export function addPaise(a: number, b: number): number {
 export function subtractPaise(a: number, b: number): number {
   assertValidPaise(a);
   assertValidPaise(b);
-  const result = a - b;
+  return a - b;
+}
+
+export function multiplyPaise(amount: number, factor: number): number {
+  assertValidPaise(amount);
+  if (typeof factor !== "number") {
+    throw new Error(`Factor must be a number: ${factor}`);
+  }
+  const result = Math.round(amount * factor);
   if (result < 0) {
-    throw new Error(
-      `Invalid subtraction: ${a} - ${b} = ${result} (negative)`
-    );
+    throw new Error(`Invalid multiplication: ${amount} * ${factor} = ${result} (negative)`);
   }
   return result;
 }

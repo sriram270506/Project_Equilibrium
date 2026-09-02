@@ -1,5 +1,9 @@
 import { percentageOfPaise } from "./money";
 
+// Pure policy evaluation constants
+export const DEFAULT_MAX_DISCOUNT_PERCENTAGE = 15; // 15% max discount
+export const DEFAULT_EXPECTED_VALUE_MULTIPLIER = 1.5; // Expected benefit multiplier
+
 export interface PolicyConstraints {
   maxDiscountBps: number;
   maxSingleDiscountCostPaise: number;
@@ -137,5 +141,89 @@ export function evaluatePolicy(params: {
       estimatedRiskPaise: riskCostPaise,
       opportunityCostPaise: platformOpportunityCostPaise,
     },
+  };
+}
+
+/**
+ * Pure helper: Evaluate an opportunity for approval
+ * Takes amount, discount, probability, risk tier and returns decision
+ */
+export interface OpportunityEvaluation {
+  decision: "APPROVE" | "REJECT";
+  reason: string;
+  expectedValuePaise: number;
+  expectedBenefitPaise: number;
+  maxAllowedDiscountPaise: number;
+}
+
+export interface OpportunityEvaluationInput {
+  amountPaise: number;
+  recommendedDiscountBps: number;
+  modelProbability: number;
+  riskTier: "TIER_1" | "TIER_2" | "TIER_3";
+}
+
+export function evaluateOpportunity(
+  input: OpportunityEvaluationInput
+): OpportunityEvaluation {
+  const {
+    amountPaise,
+    recommendedDiscountBps,
+    modelProbability,
+    riskTier,
+  } = input;
+
+  // Risk tier adjustment (TIER_1 = lowest risk, TIER_3 = highest risk)
+  const riskMultiplier = riskTier === "TIER_1" ? 1.0 : riskTier === "TIER_2" ? 0.8 : 0.6;
+
+  // Discount as percentage (e.g., 500 bps = 5%)
+  const discountPercentage = recommendedDiscountBps / 100;
+
+  // Check if discount exceeds maximum
+  const maxDiscountPaise = Math.round(
+    amountPaise * (DEFAULT_MAX_DISCOUNT_PERCENTAGE / 100)
+  );
+  const discountAmountPaise = Math.round(amountPaise * (discountPercentage / 100));
+
+  // Rejection criteria 1: Discount percentage exceeds max
+  if (discountPercentage > DEFAULT_MAX_DISCOUNT_PERCENTAGE) {
+    return {
+      decision: "REJECT",
+      reason: `Discount ${discountPercentage}% exceeds maximum ${DEFAULT_MAX_DISCOUNT_PERCENTAGE}%`,
+      expectedValuePaise: 0,
+      expectedBenefitPaise: 0,
+      maxAllowedDiscountPaise: maxDiscountPaise,
+    };
+  }
+
+  // Calculate expected benefit (discount amount * multiplier * probability)
+  const expectedBenefitPaise = Math.round(
+    discountAmountPaise * DEFAULT_EXPECTED_VALUE_MULTIPLIER * modelProbability * riskMultiplier
+  );
+
+  // Calculate expected value (benefit minus estimated costs - use much smaller cost estimates)
+  const estimatedRiskCostPaise = Math.round(1000 * (1 - modelProbability));
+  const platformCostPaise = 1000;
+  const expectedValuePaise = expectedBenefitPaise - estimatedRiskCostPaise - platformCostPaise;
+
+  // Approval criteria
+  const isHighProbability = modelProbability >= 0.5;
+  const isPositiveValue = expectedValuePaise > 0;
+
+  const approved = isHighProbability && isPositiveValue;
+
+  return {
+    decision: approved ? "APPROVE" : "REJECT",
+    reason: approved
+      ? `Opportunity approved: ${(modelProbability * 100).toFixed(1)}% probability, expected value Rs${expectedValuePaise / 100}`
+      : [
+          !isHighProbability && `Probability ${(modelProbability * 100).toFixed(1)}% below 50% threshold`,
+          !isPositiveValue && `Negative expected value Rs${expectedValuePaise / 100}`,
+        ]
+          .filter(Boolean)
+          .join("; "),
+    expectedValuePaise,
+    expectedBenefitPaise,
+    maxAllowedDiscountPaise: maxDiscountPaise,
   };
 }

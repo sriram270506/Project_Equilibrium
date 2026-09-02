@@ -4,6 +4,45 @@ import { CreateOperationInput } from "./provider-types";
 import { createAuditEvent } from "../audit";
 
 /**
+ * Pure helper: Determine payment status from provider result
+ */
+export interface DeterminePaymentStatusInput {
+  providerResult: {
+    status: string;
+    providerPaymentId?: string;
+    reason?: string;
+  } | null;
+  operationTimeoutMs: number;
+}
+
+export function determinePaymentStatus(
+  input: DeterminePaymentStatusInput
+): string {
+  const { providerResult, operationTimeoutMs } = input;
+
+  // Provider gave us a result
+  if (providerResult) {
+    return providerResult.status;
+  }
+
+  // No result - check timeout
+  if (operationTimeoutMs > 0) {
+    return "UNKNOWN";
+  }
+
+  // No timeout, no result = still processing
+  return "SUBMITTED";
+}
+
+/**
+ * Pure helper: Check if a payment status is terminal (no further changes expected)
+ */
+export function isTerminalStatus(status: string): boolean {
+  const TERMINAL_STATUSES = ["CONFIRMED", "FAILED", "REVERSED", "MANUAL_REVIEW"];
+  return TERMINAL_STATUSES.includes(status);
+}
+
+/**
  * Submit payment intent to provider
  */
 export async function submitPaymentToProvider(

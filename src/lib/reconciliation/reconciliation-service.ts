@@ -13,6 +13,82 @@ export type ReconciliationOutcome =
 export type ReconciliationSeverity = "INFO" | "WARNING" | "CRITICAL";
 
 /**
+ * Pure helper: Detect reconciliation issues between internal and external status
+ */
+export interface ReconciliationIssueDetectionInput {
+  internalStatus: string | null;
+  externalStatus: string | null;
+  internalAmountPaise: number | null;
+  externalAmountPaise: number | null;
+}
+
+export interface ReconciliationIssueResult {
+  outcome: ReconciliationOutcome;
+  issue: string | null;
+  canResolveAutomatically?: boolean;
+}
+
+export function detectReconciliationIssue(
+  input: ReconciliationIssueDetectionInput
+): ReconciliationIssueResult {
+  const {
+    internalStatus,
+    externalStatus,
+    internalAmountPaise,
+    externalAmountPaise,
+  } = input;
+
+  // Check for missing records
+  if (!internalStatus && !externalStatus) {
+    return {
+      outcome: "MISSING_INTERNAL",
+      issue: "Both internal and external records missing",
+    };
+  }
+
+  if (!internalStatus) {
+    return {
+      outcome: "MISSING_INTERNAL",
+      issue: "Internal record missing",
+    };
+  }
+
+  if (!externalStatus) {
+    return {
+      outcome: "MISSING_EXTERNAL",
+      issue: "External record missing",
+    };
+  }
+
+  // Amount mismatch takes priority
+  if (internalAmountPaise !== externalAmountPaise) {
+    return {
+      outcome: "AMOUNT_MISMATCH",
+      issue: `amount mismatch: internal Rs${(internalAmountPaise || 0) / 100}, external Rs${(externalAmountPaise || 0) / 100}`,
+    };
+  }
+
+  // Status mismatch
+  if (internalStatus !== externalStatus) {
+    // Check if it's an UNKNOWN → CONFIRMED resolution
+    const canResolveAutomatically =
+      internalStatus === "UNKNOWN" && externalStatus === "CONFIRMED";
+
+    return {
+      outcome: "STATUS_MISMATCH",
+      issue: `status mismatch: internal ${internalStatus}, external ${externalStatus}`,
+      canResolveAutomatically,
+    };
+  }
+
+  // All matched
+  return {
+    outcome: "MATCHED",
+    issue: null,
+  };
+}
+
+/**
  * Run reconciliation for a payment intent
  */
 export async function reconcilePayment(paymentIntentId: string) {
@@ -33,78 +109,58 @@ export async function reconcilePayment(paymentIntentId: string) {
   // Get provider status
   const providerStatus = await mockRazorpay.getOperation(providerRef);
 
-  if (!providerStatus) {
-    // Provider record missing
-    return createReconciliationCase(
-      paymentIntentId,
-      providerRef,
-      "MISSING_EXTERNAL",
-      "CRITICAL",
-      payment.correlationId,
-      payment.amountPaise,
-      null
-    );
-  }
+  // Use pure detection function
+  const detection = detectReconciliationIssue({
+    internalStatus: payment.status,
+    externalStatus: providerStatus?.status ?? null,
+    internalAmountPaise: payment.amountPaise,
+    externalAmountPaise: providerStatus?.amountPaise ?? null,
+  });
 
-  // Compare amounts
-  if (payment.amountPaise !== providerStatus.amountPaise) {
-    return createReconciliationCase(
-      paymentIntentId,
-      providerRef,
-      "AMOUNT_MISMATCH",
-      "CRITICAL",
-      payment.correlationId,
-      payment.amountPaise,
-      providerStatus.amountPaise
-    );
-  }
+  // Map detection result to severity
+  const severityMap: Record<ReconciliationOutcome, ReconciliationSeverity> = {
+    MATCHED: "INFO",
+    MISSING_INTERNAL: "CRITICAL",
+    MISSING_EXTERNAL: "CRITICAL",
+    AMOUNT_MISMATCH: "CRITICAL",
+    STATUS_MISMATCH: "WARNING",
+    DUPLICATE: "WARNING",
+  };
 
-  // Compare statuses
-  const internalStatus = payment.status;
-  const externalStatus = providerStatus.status;
+  const severity = severityMap[detection.outcome];
 
-  if (internalStatus !== externalStatus) {
-    // If external is CONFIRMED but internal is UNKNOWN, update internal
-    if (externalStatus === "CONFIRMED" && internalStatus === "UNKNOWN") {
-      await prisma.paymentIntent.update({
-        where: { id: paymentIntentId },
-        data: {
-          status: "CONFIRMED",
-          confirmedAt: new Date(),
-        },
-      });
-
-      return createReconciliationCase(
-        paymentIntentId,
-        providerRef,
-        "MATCHED",
-        "INFO",
-        payment.correlationId,
-        payment.amountPaise,
-        providerStatus.amountPaise
-      );
-    }
+  // If UNKNOWN → CONFIRMED, auto-resolve
+  if (
+    detection.outcome === "STATUS_MISMATCH" &&
+    detection.canResolveAutomatically
+  ) {
+    await prisma.paymentIntent.update({
+      where: { id: paymentIntentId },
+      data: {
+        status: "CONFIRMED",
+        confirmedAt: new Date(),
+      },
+    });
 
     return createReconciliationCase(
       paymentIntentId,
       providerRef,
-      "STATUS_MISMATCH",
-      "WARNING",
+      "MATCHED",
+      "INFO",
       payment.correlationId,
       payment.amountPaise,
-      providerStatus.amountPaise
+      providerStatus?.amountPaise || payment.amountPaise
     );
   }
 
-  // All matched
   return createReconciliationCase(
     paymentIntentId,
     providerRef,
-    "MATCHED",
-    "INFO",
+    detection.outcome,
+    severity,
     payment.correlationId,
     payment.amountPaise,
-    providerStatus.amountPaise
+    providerStatus?.amountPaise || null
   );
 }
 

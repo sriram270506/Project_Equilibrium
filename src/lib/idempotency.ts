@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { ConflictError } from "./errors";
+import { generateIdempotencyKey as generateIdempotencyKeyFromIds } from "./ids";
 
 /**
  * Generate a deterministic fingerprint of a request
@@ -7,6 +8,13 @@ import { ConflictError } from "./errors";
 export function generateRequestFingerprint(payload: Record<string, unknown>): string {
   const canonical = JSON.stringify(payload, Object.keys(payload).sort());
   return crypto.createHash("sha256").update(canonical).digest("hex");
+}
+
+/**
+ * Generate an idempotency key with idem_ prefix
+ */
+export function generateIdempotencyKey(): string {
+  return generateIdempotencyKeyFromIds();
 }
 
 /**
