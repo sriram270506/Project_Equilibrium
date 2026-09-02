@@ -1,6 +1,7 @@
 "use client";
+"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { formatPaise } from "@/src/lib/money";
 import { useRouter } from "next/navigation";
 
@@ -24,9 +25,10 @@ interface OpportunityDetail {
 export default function OpportunityDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
+  const resolvedParams = use(params);
   const [opportunity, setOpportunity] = useState<OpportunityDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export default function OpportunityDetailPage({
   useEffect(() => {
     const fetchOpportunity = async () => {
       try {
-        const res = await fetch(`/api/opportunities/${params.id}`);
+        const res = await fetch(`/api/opportunities/${resolvedParams.id}`);
         const data = await res.json();
         if (data.success) {
           setOpportunity(data.data);
@@ -50,7 +52,7 @@ export default function OpportunityDetailPage({
     };
 
     fetchOpportunity();
-  }, [params.id]);
+  }, [resolvedParams.id]);
 
   const handleApprove = async () => {
     if (!opportunity) return;

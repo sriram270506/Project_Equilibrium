@@ -1,6 +1,7 @@
 "use client";
+"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { formatPaise } from "@/src/lib/money";
 import { useRouter } from "next/navigation";
 
@@ -25,9 +26,10 @@ interface PaymentDetail {
 export default function PaymentDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
+  const resolvedParams = use(params);
   const [payment, setPayment] = useState<PaymentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export default function PaymentDetailPage({
   useEffect(() => {
     const fetchPayment = async () => {
       try {
-        const res = await fetch(`/api/payments/${params.id}`);
+        const res = await fetch(`/api/payments/${resolvedParams.id}`);
         const data = await res.json();
         if (data.success) {
           setPayment(data.data);
@@ -50,7 +52,7 @@ export default function PaymentDetailPage({
     };
 
     fetchPayment();
-  }, [params.id]);
+  }, [resolvedParams.id]);
 
   if (loading) {
     return <div className="text-center py-8">Loading payment...</div>;
