@@ -1,213 +1,275 @@
 "use client";
-"use client";
 
-import { useEffect, useState, use } from "react";
-import { formatPaise } from "@/src/lib/money";
+import { use, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  PageHeader,
+  Button,
+  Money,
+  Callout,
+  DataRow,
+  MonoId,
+  LoadingState,
+  ErrorState,
+} from "@/src/components/ui/primitives";
+import { StatusChip } from "@/src/components/ui/status";
+import { ExplanationPanel } from "@/src/components/explainability";
+import { DealMathCard } from "@/src/components/deal-math";
+import { RunwayChart } from "@/src/components/runway-chart";
+import { PredictionExplanation } from "@/src/lib/ml/explain";
+import { DealEconomics } from "@/src/lib/deal-economics";
 
-interface OpportunityDetail {
-  id: string;
-  supplier: { id: string; name: string; email: string; riskTier: string };
-  predictionProbability: number;
-  modelVersion: string;
-  policyVersion: string;
-  expectedBenefitPaise: number;
-  opportunityCostPaise: number;
-  riskCostPaise: number;
-  expectedValuePaise: number;
-  recommendedDiscountBps: number;
-  maxAllowedDiscountPaise: number;
-  status: string;
-  decisionReason: string;
-  createdAt: string;
+interface OfferDetail {
+  opportunity: {
+    id: string;
+    status: string;
+    probability: number;
+    modelVersion: string;
+    policyVersion: string;
+    decisionReason: string;
+    expectedValuePaise: number;
+    expectedBenefitPaise: number;
+    opportunityCostPaise: number;
+    riskCostPaise: number;
+    recommendedDiscountBps: number;
+    createdAt: string;
+  };
+  supplier: {
+    id: string;
+    name: string;
+    email: string;
+    riskTier: string;
+    since: string;
+  };
+  explanation: PredictionExplanation;
+  comparison: {
+    modelTriggered: boolean;
+    baselineTriggered: boolean;
+    agree: boolean;
+    recommendation: string;
+    reasoning: string;
+  };
+  deal: DealEconomics;
+  observations: Array<{
+    date: string;
+    balancePaise: number;
+    inflowPaise: number;
+    outflowPaise: number;
+    daysRunway: number;
+  }>;
+  payment: { id: string; status: string; correlationId: string } | null;
 }
 
-export default function OpportunityDetailPage({
+export default function OfferDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const router = useRouter();
-  const resolvedParams = use(params);
-  const [opportunity, setOpportunity] = useState<OpportunityDetail | null>(null);
+
+  const [data, setData] = useState<OfferDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/opportunities/${id}`, {
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (json.success) setData(json.data);
+      else setError(json.error?.message ?? "Failed to load this offer");
+    } catch {
+      setError("Could not reach the API.");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    const fetchOpportunity = async () => {
-      try {
-        const res = await fetch(`/api/opportunities/${resolvedParams.id}`);
-        const data = await res.json();
-        if (data.success) {
-          setOpportunity(data.data);
-        } else {
-          setError(data.error?.message || "Failed to fetch");
-        }
-      } catch (err) {
-        setError("Network error");
-      } finally {
-        setLoading(false);
-      }
-    };
+    load();
+  }, [load]);
 
-    fetchOpportunity();
-  }, [resolvedParams.id]);
-
-  const handleApprove = async () => {
-    if (!opportunity) return;
+  async function approve() {
     setApproving(true);
-
+    setApprovalError(null);
     try {
-      const res = await fetch(`/api/opportunities/${opportunity.id}/approve`, {
+      const res = await fetch(`/api/opportunities/${id}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ operatorId: "demo-finance-operator" }),
+        body: JSON.stringify({ operatorId: "priya.raman" }),
       });
-
-      const data = await res.json();
-      if (data.success) {
-        alert(
-          `Opportunity approved! Payment Intent: ${data.data.paymentIntentId}`
-        );
-        router.push("/dashboard/payments");
+      const json = await res.json();
+      if (json.success) {
+        router.push(`/dashboard/payments/${json.data.paymentIntentId}`);
       } else {
-        setError(data.error?.message || "Failed to approve");
+        setApprovalError(json.error?.message ?? "Approval failed");
       }
-    } catch (err) {
-      setError("Network error during approval");
+    } catch {
+      setApprovalError("Could not reach the API.");
     } finally {
       setApproving(false);
     }
-  };
-
-  if (loading) {
-    return <div className="text-center py-8">Loading opportunity...</div>;
   }
 
-  if (!opportunity) {
-    return (
-      <div className="text-center py-8 text-red-600">Opportunity not found</div>
-    );
-  }
+  if (loading) return <LoadingState label="Loading the offer" />;
+  if (error) return <ErrorState message={error} onRetry={load} />;
+  if (!data) return null;
+
+  const { opportunity, supplier, explanation, comparison, deal, observations } =
+    data;
+  const canApprove = opportunity.status === "RECOMMENDED";
 
   return (
-    <div className="max-w-4xl">
-      <button
-        onClick={() => router.back()}
-        className="mb-6 text-blue-600 hover:text-blue-700"
+    <div className="fade-up max-w-5xl">
+      <Link
+        href="/dashboard/opportunities"
+        className="focusable mb-3 inline-flex text-[13px] font-medium text-brand-strong hover:underline"
       >
-        ← Back
-      </button>
+        ← All suppliers at risk
+      </Link>
 
-      <div className="bg-white rounded-lg shadow p-8">
-        <div className="flex justify-between items-start mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">
-              {opportunity.supplier.name}
-            </h1>
-            <p className="text-slate-700 font-medium">{opportunity.supplier.email}</p>
+      <PageHeader
+        title={supplier.name}
+        lede={explanation.summary}
+        action={
+          <div className="flex flex-col items-end gap-2">
+            <StatusChip status={opportunity.status} />
+            {canApprove ? (
+              <Button variant="primary" onClick={approve} disabled={approving}>
+                {approving ? "Approving…" : "Approve and pay"}
+              </Button>
+            ) : null}
           </div>
-          <span
-            className={`px-4 py-2 rounded-full text-lg font-semibold ${
-              opportunity.status === "RECOMMENDED"
-                ? "bg-amber-100 text-amber-900"
-                : "bg-emerald-100 text-emerald-900"
-            }`}
-          >
-            {opportunity.status}
-          </span>
+        }
+      />
+
+      {approvalError ? (
+        <div className="mb-4">
+          <Callout tone="danger" title="Could not approve">
+            {approvalError}
+          </Callout>
         </div>
+      ) : null}
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-red-800">
-            {error}
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-8 mb-8">
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Model Prediction</h2>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-slate-700 font-medium">Probability</p>
-                <p className="text-2xl font-bold text-emerald-600">
-                  {(opportunity.predictionProbability * 100).toFixed(1)}%
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-700 font-medium">Model Version</p>
-                <p className="text-sm font-mono">{opportunity.modelVersion}</p>
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Economic Analysis</h2>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-slate-700 font-medium">Expected Value</p>
-                <p className="text-2xl font-bold text-emerald-600">
-                  {formatPaise(opportunity.expectedValuePaise)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-700 font-medium">Discount Recommended</p>
-                <p className="text-lg font-semibold">
-                  {opportunity.recommendedDiscountBps} bps (1-{opportunity.recommendedDiscountBps / 100}%)
-                </p>
-              </div>
-            </div>
-          </section>
+      {/* Where the model and the naive rule disagree is where a human matters. */}
+      {!comparison.agree ? (
+        <div className="mb-4">
+          <Callout tone="warn" title="The model and the simple rule disagree">
+            {comparison.reasoning}
+          </Callout>
         </div>
+      ) : null}
 
-        <section className="mb-8 bg-slate-50 rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Policy Evaluation</h2>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm text-slate-700 font-medium">Expected Benefit</p>
-              <p className="text-lg font-semibold">
-                {formatPaise(opportunity.expectedBenefitPaise)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-700 font-medium">Opportunity Cost</p>
-              <p className="text-lg font-semibold">
-                {formatPaise(opportunity.opportunityCostPaise)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-700 font-medium">Risk Cost</p>
-              <p className="text-lg font-semibold">
-                {formatPaise(opportunity.riskCostPaise)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-700 font-medium">Max Allowed Discount</p>
-              <p className="text-lg font-semibold">
-                {formatPaise(opportunity.maxAllowedDiscountPaise)}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <p className="text-sm font-semibold text-blue-900 mb-2">
-            Policy Decision
-          </p>
-          <p className="text-sm text-blue-800">{opportunity.decisionReason}</p>
-        </div>
-
-        {opportunity.status === "RECOMMENDED" && (
-          <button
-            onClick={handleApprove}
-            disabled={approving}
-            className="w-full px-6 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-          >
-            {approving ? "Approving..." : "Approve Opportunity"}
-          </button>
-        )}
+      <div className="mb-4">
+        <RunwayChart observations={observations} supplierName={supplier.name} />
       </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ExplanationPanel
+          explanation={explanation}
+          threshold={explanation.threshold}
+        />
+        <DealMathCard deal={deal} supplierName={supplier.name} />
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader
+            title="Policy verdict"
+            hint="The model proposes. Policy decides what may actually be offered."
+          />
+          <CardBody>
+            <p className="mb-3 text-[14px] leading-relaxed text-ink-body">
+              {opportunity.decisionReason}
+            </p>
+            <DataRow label="Expected benefit" hint="probability-weighted">
+              <Money paise={opportunity.expectedBenefitPaise} />
+            </DataRow>
+            <DataRow label="Less opportunity cost">
+              −<Money paise={opportunity.opportunityCostPaise} />
+            </DataRow>
+            <DataRow label="Less risk cost" hint="weighted by 1 − probability">
+              −<Money paise={opportunity.riskCostPaise} />
+            </DataRow>
+            <DataRow label="Expected value">
+              <span
+                className={
+                  opportunity.expectedValuePaise >= 0
+                    ? "text-ok"
+                    : "text-danger"
+                }
+              >
+                <Money paise={opportunity.expectedValuePaise} />
+              </span>
+            </DataRow>
+            <DataRow label="Discount applied">
+              {(opportunity.recommendedDiscountBps / 100).toFixed(2)}%
+            </DataRow>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Provenance"
+            hint="Stored with the decision, so it can be reconstructed later."
+          />
+          <CardBody>
+            <DataRow label="Supplier since">
+              {new Date(supplier.since).toLocaleDateString("en-IN", {
+                dateStyle: "medium",
+              })}
+            </DataRow>
+            <DataRow label="Risk tier">{supplier.riskTier}</DataRow>
+            <DataRow label="Model version">
+              <MonoId value={opportunity.modelVersion} />
+            </DataRow>
+            <DataRow label="Policy version">
+              <MonoId value={opportunity.policyVersion} />
+            </DataRow>
+            <DataRow label="Scored at">
+              {new Date(opportunity.createdAt).toLocaleString("en-IN", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </DataRow>
+            <DataRow label="Offer id">
+              <MonoId value={opportunity.id} truncate={20} />
+            </DataRow>
+          </CardBody>
+        </Card>
+      </div>
+
+      {data.payment ? (
+        <div className="mt-4">
+          <Card>
+            <CardHeader
+              title="Resulting payment"
+              action={
+                <Link
+                  href={`/dashboard/payments/${data.payment.id}`}
+                  className="focusable text-[13px] font-medium text-brand-strong hover:underline"
+                >
+                  Trace it →
+                </Link>
+              }
+            />
+            <CardBody className="flex items-center gap-4">
+              <StatusChip status={data.payment.status} />
+              <MonoId value={data.payment.correlationId} />
+            </CardBody>
+          </Card>
+        </div>
+      ) : null}
     </div>
   );
 }

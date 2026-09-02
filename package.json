@@ -15,7 +15,8 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
-    "demo:verify": "tsx scripts/verify-demo.ts"
+    "demo:verify": "tsx scripts/verify-demo.ts",
+    "ml:train": "tsx scripts/train-model.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -1,72 +1,36 @@
 import { NextResponse } from "next/server";
-import { calculateTrialBalance, assertLedgerBalanced, getAllAccountBalances } from "@/src/lib/ledger/trial-balance";
+import { calculateTrialBalance } from "@/src/lib/ledger/trial-balance";
 import { successEnvelope, errorEnvelope } from "@/src/lib/api-envelope";
 
 /**
  * GET /api/ledger/trial-balance
- * Returns trial balance and validates ledger invariant
+ *
+ * Returns the trial balance and whether the ledger invariant holds.
+ *
+ * An imbalanced ledger is reported as a successful response carrying
+ * `balanced: false`, not as a transport error. Returning 422 with an error
+ * envelope was actively harmful: the single most important failure this system
+ * can have would arrive at the UI as a generic message stripped of the numbers
+ * needed to investigate it. Callers that need to page someone should watch the
+ * flag, which is unambiguous and machine-readable.
  */
 export async function GET() {
   try {
-    // Calculate trial balance
     const trialBalance = await calculateTrialBalance();
-
-    // Validate ledger invariant
-    try {
-      await assertLedgerBalanced();
-    } catch (error) {
-      // If ledger is not balanced, return it anyway but flag as error
-      return NextResponse.json(
-        errorEnvelope(
-          "LEDGER_IMBALANCED",
-          (error as Error).message
-        ),
-        { status: 422 }
-      );
-    }
 
     return NextResponse.json(
       successEnvelope({
         trialBalance,
-        status: "balanced",
-        message: "Ledger is balanced",
-      }),
-      { status: 200 }
+        balanced: trialBalance.balanced,
+        message: trialBalance.balanced
+          ? "Debits equal credits."
+          : `Ledger out of balance by ${trialBalance.net} paise.`,
+      })
     );
   } catch (error) {
     console.error("Error calculating trial balance:", error);
     return NextResponse.json(
-      errorEnvelope(
-        "INTERNAL_ERROR",
-        "Failed to calculate trial balance"
-      ),
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * GET /api/ledger/accounts
- * Returns all account balances
- */
-export async function getAccountBalances() {
-  try {
-    const accounts = await getAllAccountBalances();
-
-    return NextResponse.json(
-      successEnvelope({
-        accounts,
-        count: accounts.length,
-      }),
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Error fetching account balances:", error);
-    return NextResponse.json(
-      errorEnvelope(
-        "INTERNAL_ERROR",
-        "Failed to fetch account balances"
-      ),
+      errorEnvelope("INTERNAL_ERROR", "Failed to calculate trial balance"),
       { status: 500 }
     );
   }
