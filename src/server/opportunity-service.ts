@@ -116,6 +116,7 @@ export async function evaluateOpportunity(
 
 /**
  * Approve opportunity and create payment intent
+ * All writes are atomic - succeeds or fails as a unit
  */
 export async function approveOpportunity(
   opportunityId: string,
@@ -135,14 +136,13 @@ export async function approveOpportunity(
     );
   }
 
-  // Start transaction
+  // Prepare all data before transaction
   const correlationId = generateId("corr");
   const paymentIntentId = generateId();
   const providerPaymentId = generatePaymentId();
   const providerIdempotencyKey = generateIdempotencyKey();
   const internalReference = `INT_${Date.now()}`;
 
-  // Create payment intent
   const requestPayload = {
     supplier_id: opportunity.supplierId,
     amount_paise: opportunity.expectedBenefitPaise,
@@ -152,88 +152,103 @@ export async function approveOpportunity(
 
   const requestFingerprint = generateRequestFingerprint(requestPayload);
 
-  await prisma.paymentIntent.create({
-    data: {
-      id: paymentIntentId,
-      internalReference,
-      provider: "RAZORPAY",
-      providerPaymentId,
-      operationType: "DISCOUNT_PAYOUT",
-      amountPaise: opportunity.expectedBenefitPaise,
-      currency: "INR",
-      status: "INTENT_CREATED",
-      requestFingerprint,
-      providerIdempotencyKey,
-      correlationId,
-      supplierId: opportunity.supplierId,
-    },
-  });
-
-  // Create ledger transaction
-  await prisma.ledgerTransaction.create({
-    data: {
-      id: generateId(),
-      referenceType: "PAYMENT_INTENT",
-      referenceId: paymentIntentId,
-      currency: "INR",
-      description: `Discount payout opportunity ${opportunityId}`,
-      paymentIntentId,
-      entries: {
-        create: [
-          {
-            id: generateId(),
-            accountCode: "PLATFORM_CASH",
-            debitPaise: opportunity.expectedBenefitPaise,
-            creditPaise: 0,
-          },
-          {
-            id: generateId(),
-            accountCode: "SUPPLIER_PAYABLE",
-            debitPaise: 0,
-            creditPaise: opportunity.expectedBenefitPaise,
-          },
-        ],
+  // Atomic transaction: all writes succeed or all fail
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Create payment intent
+    const paymentIntent = await tx.paymentIntent.create({
+      data: {
+        id: paymentIntentId,
+        internalReference,
+        provider: "RAZORPAY",
+        providerPaymentId,
+        operationType: "DISCOUNT_PAYOUT",
+        amountPaise: opportunity.expectedBenefitPaise,
+        currency: "INR",
+        status: "INTENT_CREATED",
+        requestFingerprint,
+        providerIdempotencyKey,
+        correlationId,
+        supplierId: opportunity.supplierId,
       },
-    },
-  });
+    });
 
-  // Create audit event
-  await createAuditEvent({
-    eventType: "OPPORTUNITY_APPROVED",
-    actorType: "OPERATOR",
-    actorId: operatorId,
-    aggregateType: "OPPORTUNITY",
-    aggregateId: opportunityId,
-    payload: {
-      payment_intent_id: paymentIntentId,
-      correlation_id: correlationId,
-    },
-    policyVersion: opportunity.policyVersion,
-    supplierId: opportunity.supplierId,
-  });
+    // 2. Create ledger transaction with entries
+    await tx.ledgerTransaction.create({
+      data: {
+        id: generateId(),
+        referenceType: "PAYMENT_INTENT",
+        referenceId: paymentIntentId,
+        currency: "INR",
+        description: `Discount payout opportunity ${opportunityId}`,
+        paymentIntentId,
+        entries: {
+          create: [
+            {
+              id: generateId(),
+              accountCode: "PLATFORM_CASH",
+              debitPaise: opportunity.expectedBenefitPaise,
+              creditPaise: 0,
+            },
+            {
+              id: generateId(),
+              accountCode: "SUPPLIER_PAYABLE",
+              debitPaise: 0,
+              creditPaise: opportunity.expectedBenefitPaise,
+            },
+          ],
+        },
+      },
+    });
 
-  // Create outbox event for eventual publishing
-  await createOutboxEvent(
-    "PAYMENT_INTENT_CREATED",
-    "PAYMENT_INTENT",
-    paymentIntentId,
-    {
-      amount_paise: opportunity.expectedBenefitPaise,
-      supplier_id: opportunity.supplierId,
-      opportunity_id: opportunityId,
-    },
-    correlationId,
-    paymentIntentId
-  );
+    // 3. Create audit event
+    await tx.auditEvent.create({
+      data: {
+        id: generateId(),
+        eventType: "OPPORTUNITY_APPROVED",
+        actorType: "OPERATOR",
+        actorId: operatorId,
+        aggregateType: "OPPORTUNITY",
+        aggregateId: opportunityId,
+        payloadJson: JSON.stringify({
+          payment_intent_id: paymentIntentId,
+          correlation_id: correlationId,
+        }),
+        modelVersion: opportunity.modelVersion,
+        policyVersion: opportunity.policyVersion,
+        correlationId,
+        supplierId: opportunity.supplierId,
+      },
+    });
 
-  // Update opportunity status
-  await prisma.liquidityOpportunity.update({
-    where: { id: opportunityId },
-    data: { status: "APPROVED" },
+    // 4. Create outbox event for eventual publishing
+    await tx.outboxEvent.create({
+      data: {
+        id: generateId(),
+        eventType: "PAYMENT_INTENT_CREATED",
+        aggregateType: "PAYMENT_INTENT",
+        aggregateId: paymentIntentId,
+        payloadJson: JSON.stringify({
+          amount_paise: opportunity.expectedBenefitPaise,
+          supplier_id: opportunity.supplierId,
+          opportunity_id: opportunityId,
+        }),
+        status: "PENDING",
+        correlationId,
+        paymentIntentId,
+      },
+    });
+
+    // 5. Update opportunity status
+    await tx.liquidityOpportunity.update({
+      where: { id: opportunityId },
+      data: { status: "APPROVED" },
+    });
+
+    return paymentIntent;
   });
 
   return {
-    paymentIntentId,
+    paymentIntentId: result.id,
     status: "INTENT_CREATED",
     correlationId,
   };
