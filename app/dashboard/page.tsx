@@ -3,25 +3,55 @@
 import { useEffect, useState } from "react";
 import { formatPaise } from "@/src/lib/money";
 
+interface DashboardData {
+  kpis: {
+    recommendedOpportunities: number;
+    expectedValuePaise: number;
+    activePaymentIntents: number;
+    openReconciliationCases: number;
+  };
+}
+
+interface HealthData {
+  status: string;
+  mode: string;
+  provider: string;
+  timestamp: string;
+}
+
 export default function DashboardPage() {
-  const [health, setHealth] = useState<any>(null);
+  const [health, setHealth] = useState<HealthData | null>(null);
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchHealth = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch("/api/health");
-        const data = await res.json();
-        setHealth(data);
+        // Fetch health data
+        const healthRes = await fetch("/api/health");
+        if (!healthRes.ok) throw new Error("Health check failed");
+        const healthData = await healthRes.json();
+        
+        // Fetch dashboard data
+        const dashboardRes = await fetch("/api/dashboard");
+        if (!dashboardRes.ok) throw new Error("Dashboard data failed");
+        const dashboardData = await dashboardRes.json();
+        
+        if (healthData.success && dashboardData.success) {
+          setHealth(healthData.data);
+          setDashboard(dashboardData.data);
+        } else {
+          setError("Failed to load dashboard data");
+        }
       } catch (err) {
-        setError("Failed to fetch system health");
+        setError(err instanceof Error ? err.message : "Failed to fetch data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchHealth();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -29,7 +59,13 @@ export default function DashboardPage() {
   }
 
   if (error) {
-    return <div className="text-center py-8 text-red-600">{error}</div>;
+    return (
+      <div className="text-center py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800 inline-block">
+          {error}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -43,25 +79,25 @@ export default function DashboardPage() {
           <div>
             <p className="text-sm text-slate-600">Status</p>
             <p className="text-lg font-semibold text-emerald-600">
-              {health?.data?.status || "Unknown"}
+              {health?.status || "Unknown"}
             </p>
           </div>
           <div>
             <p className="text-sm text-slate-600">Provider Mode</p>
             <p className="text-lg font-semibold text-blue-600">
-              {health?.data?.provider || "Unknown"}
+              {health?.provider || "Unknown"}
             </p>
           </div>
           <div>
             <p className="text-sm text-slate-600">Application Mode</p>
             <p className="text-lg font-semibold text-purple-600">
-              {health?.data?.mode || "Unknown"}
+              {health?.mode || "Unknown"}
             </p>
           </div>
           <div>
             <p className="text-sm text-slate-600">Timestamp</p>
             <p className="text-sm text-slate-600">
-              {new Date(health?.data?.timestamp).toLocaleString("en-IN")}
+              {health?.timestamp ? new Date(health.timestamp).toLocaleString("en-IN") : "Unknown"}
             </p>
           </div>
         </div>
@@ -71,25 +107,31 @@ export default function DashboardPage() {
       <div className="grid grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
           <p className="text-sm text-slate-600 mb-2">Recommended Opportunities</p>
-          <p className="text-3xl font-bold text-slate-900">2</p>
+          <p className="text-3xl font-bold text-slate-900">
+            {dashboard?.kpis.recommendedOpportunities ?? 0}
+          </p>
           <p className="text-xs text-slate-500 mt-2">Ready for review</p>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <p className="text-sm text-slate-600 mb-2">Expected Value</p>
           <p className="text-3xl font-bold text-emerald-600">
-            {formatPaise(167000)}
+            {formatPaise(dashboard?.kpis.expectedValuePaise ?? 0)}
           </p>
           <p className="text-xs text-slate-500 mt-2">Aggregated</p>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <p className="text-sm text-slate-600 mb-2">Active Payment Intents</p>
-          <p className="text-3xl font-bold text-blue-600">1</p>
+          <p className="text-3xl font-bold text-blue-600">
+            {dashboard?.kpis.activePaymentIntents ?? 0}
+          </p>
           <p className="text-xs text-slate-500 mt-2">Confirmed</p>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <p className="text-sm text-slate-600 mb-2">Open Reconciliation</p>
-          <p className="text-3xl font-bold text-amber-600">1</p>
-          <p className="text-xs text-slate-500 mt-2">Resolved</p>
+          <p className="text-3xl font-bold text-amber-600">
+            {dashboard?.kpis.openReconciliationCases ?? 0}
+          </p>
+          <p className="text-xs text-slate-500 mt-2">Cases</p>
         </div>
       </div>
 

@@ -23,13 +23,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
           <nav className="space-y-2">
             {[
-              { href: "/", label: "Overview" },
-              { href: "/opportunities", label: "Liquidity Opportunities" },
-              { href: "/payments", label: "Payment Operations" },
-              { href: "/disputes", label: "Dispute Evidence" },
-              { href: "/reconciliation", label: "Reconciliation" },
-              { href: "/demo", label: "Demo Controls" },
-              { href: "/scope", label: "Scope & Controls" },
+              { href: "/dashboard", label: "Overview" },
+              { href: "/dashboard/opportunities", label: "Liquidity Opportunities" },
+              { href: "/dashboard/payments", label: "Payment Operations" },
+              { href: "/dashboard/disputes", label: "Dispute Evidence" },
+              { href: "/dashboard/reconciliation", label: "Reconciliation" },
+              { href: "/dashboard/demo", label: "Demo Controls" },
+              { href: "/dashboard/scope", label: "Scope & Controls" },
             ].map((item) => (
               <Link
                 key={item.href}

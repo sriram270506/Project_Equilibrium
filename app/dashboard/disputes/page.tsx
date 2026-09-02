@@ -69,7 +69,7 @@ export default function DisputesPage() {
           {disputes.map((dispute) => (
             <Link
               key={dispute.id}
-              href={`/disputes/${dispute.id}`}
+              href={`/dashboard/disputes/${dispute.id}`}
               className="block bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
             >
               <div className="flex justify-between items-start mb-4">

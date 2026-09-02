@@ -116,7 +116,7 @@ export default function OpportunitiesPage() {
               </div>
 
               <Link
-                href={`/opportunities/${opp.id}`}
+                href={`/dashboard/opportunities/${opp.id}`}
                 className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 View Details →
