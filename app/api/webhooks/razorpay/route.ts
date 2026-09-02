@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/prisma";
 import { successEnvelope, errorEnvelope } from "@/src/lib/api-envelope";
 import { appendEvent } from "@/src/lib/events/event-service";
+import { createAuditEvent } from "@/src/lib/audit";
 
 interface RazorpayWebhookPayload {
   eventId: string;
@@ -180,23 +181,22 @@ export async function POST(request: NextRequest) {
       paymentIntent.correlationId
     );
 
-    // Create audit event
-    await prisma.auditEvent.create({
-      data: {
-        id: `audit_${Date.now()}`,
-        eventType: "WEBHOOK_RECEIVED",
-        actorId: "razorpay-webhook",
-        actorType: "PROVIDER",
-        aggregateType: "PAYMENT_INTENT",
-        aggregateId: paymentIntent.id,
-        payloadJson: JSON.stringify({
-          status: internalStatus,
-          providerEventId: payload.eventId,
-          providerPaymentId: payload.paymentId,
-        }),
-        correlationId: paymentIntent.correlationId,
-        supplierId: paymentIntent.supplierId,
+    // Audit through the chain helper so the hash chain is extended rather than
+    // bypassed. Writing to prisma.auditEvent directly would leave an entry with
+    // no valid hash and break verification for everything after it.
+    await createAuditEvent({
+      eventType: "WEBHOOK_RECEIVED",
+      actorType: "PROVIDER",
+      actorId: "razorpay-webhook",
+      aggregateType: "PAYMENT_INTENT",
+      aggregateId: paymentIntent.id,
+      payload: {
+        status: internalStatus,
+        providerEventId: payload.eventId,
+        providerPaymentId: payload.paymentId,
       },
+      correlationId: paymentIntent.correlationId,
+      supplierId: paymentIntent.supplierId,
     });
 
     console.log(

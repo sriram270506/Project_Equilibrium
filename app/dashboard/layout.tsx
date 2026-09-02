@@ -62,6 +62,11 @@ const SECTIONS: Array<{
         label: "Model card",
         hint: "Accuracy and limits",
       },
+      {
+        href: "/dashboard/controls",
+        label: "Risk controls",
+        hint: "Limits, kill switch, audit chain",
+      },
     ],
   },
   {
@@ -71,6 +76,11 @@ const SECTIONS: Array<{
         href: "/dashboard/demo",
         label: "Guided walkthrough",
         hint: "Run the whole story",
+      },
+      {
+        href: "/dashboard/failures",
+        label: "Failure injection",
+        hint: "Break it on purpose",
       },
       {
         href: "/dashboard/scope",

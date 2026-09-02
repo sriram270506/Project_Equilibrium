@@ -1,53 +1,90 @@
+import { NextRequest, NextResponse } from "next/server";
 import { approveOpportunity } from "@/src/server/opportunity-service";
 import { submitPaymentToProvider } from "@/src/lib/payments/payment-service";
 import { successEnvelope, errorEnvelope } from "@/src/lib/api-envelope";
-import { NextRequest, NextResponse } from "next/server";
+import { withAuth } from "@/src/lib/auth/guard";
+import { RiskControlError } from "@/src/lib/risk/controls";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
-    const operatorId = body.operatorId || "demo-finance-operator";
+/**
+ * POST /api/opportunities/:id/approve
+ *
+ * Approves an early-payment offer and, unless the amount requires a second
+ * approver, submits it to the provider.
+ *
+ * The approving operator is taken from the authenticated caller. It used to be
+ * read from the request body, which meant anyone could attribute a payment to
+ * anyone - an audit trail that records whatever the caller claims is worse than
+ * no audit trail, because it looks trustworthy.
+ */
+export const POST = withAuth<{ params: Promise<{ id: string }> }>(
+  "OPERATOR",
+  async (_request: NextRequest, { params }, auth) => {
+    try {
+      const { id } = await params;
 
-    // Approve opportunity and create payment intent
-    const result = await approveOpportunity(id, operatorId);
+      const result = await approveOpportunity(id, auth.userId);
 
-    // Submit to provider
-    const paymentStatus = await submitPaymentToProvider(result.paymentIntentId);
+      // Held for a second approver: nothing goes to the provider yet.
+      if (result.requiresDualApproval) {
+        return NextResponse.json(
+          successEnvelope({
+            paymentIntentId: result.paymentIntentId,
+            status: result.status,
+            correlationId: result.correlationId,
+            requiresDualApproval: true,
+            message:
+              "Approved, but this amount is above the dual-approval threshold. A second operator must confirm before any money moves.",
+          }),
+          { status: 201 }
+        );
+      }
 
-    return NextResponse.json(
-      successEnvelope({
-        paymentIntentId: result.paymentIntentId,
-        status: paymentStatus,
-        correlationId: result.correlationId,
-        message: "Opportunity approved and payment submitted",
-      }),
-      { status: 201 }
-    );
-  } catch (error) {
-    const message = (error as Error).message;
-    console.error("Error approving opportunity:", error);
+      const paymentStatus = await submitPaymentToProvider(
+        result.paymentIntentId
+      );
 
-    if (message.includes("not found")) {
       return NextResponse.json(
-        errorEnvelope("NOT_FOUND", message),
-        { status: 404 }
+        successEnvelope({
+          paymentIntentId: result.paymentIntentId,
+          status: paymentStatus,
+          correlationId: result.correlationId,
+          requiresDualApproval: false,
+          message: "Offer approved and payment submitted.",
+        }),
+        { status: 201 }
+      );
+    } catch (error) {
+      if (error instanceof RiskControlError) {
+        return NextResponse.json(
+          errorEnvelope("RISK_CONTROL_BLOCKED", error.message, {
+            violations: error.violations,
+          }),
+          { status: 409 }
+        );
+      }
+
+      const message = (error as Error).message;
+      console.error("Error approving opportunity:", error);
+
+      if (message.includes("not found")) {
+        return NextResponse.json(errorEnvelope("NOT_FOUND", message), {
+          status: 404,
+        });
+      }
+
+      if (
+        message.includes("Cannot approve") ||
+        message.includes("Invalid opportunity transition")
+      ) {
+        return NextResponse.json(errorEnvelope("INVALID_STATE", message), {
+          status: 409,
+        });
+      }
+
+      return NextResponse.json(
+        errorEnvelope("INTERNAL_ERROR", "Failed to approve the offer"),
+        { status: 500 }
       );
     }
-
-    if (message.includes("Cannot approve")) {
-      return NextResponse.json(
-        errorEnvelope("INVALID_STATE", message),
-        { status: 409 }
-      );
-    }
-
-    return NextResponse.json(
-      errorEnvelope("INTERNAL_ERROR", "Failed to approve opportunity"),
-      { status: 500 }
-    );
   }
-}
+);

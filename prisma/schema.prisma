@@ -92,6 +92,14 @@ model PaymentIntent {
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
   confirmedAt             DateTime?
+
+  // Maker-checker. Payments above the dual-approval threshold sit in
+  // PENDING_APPROVAL until a second, different operator approves them.
+  makerId                 String?
+  checkerId               String?
+  approvalThresholdPaise  Int?
+  approvedAt              DateTime?
+
   supplierId              String
   supplier                Supplier @relation(fields: [supplierId], references: [id])
   ledgerTransactions      LedgerTransaction[]
@@ -182,8 +190,16 @@ model AuditEvent {
   supplierId      String?
   supplier        Supplier? @relation(fields: [supplierId], references: [id])
 
+  // Tamper-evidence. Each entry hashes its own content together with the
+  // previous entry's hash, so altering any historical row breaks every hash
+  // after it. sequence is global and gap-free.
+  sequence        Int      @unique
+  previousHash    String
+  entryHash       String   @unique
+
   @@index([aggregateType, aggregateId])
   @@index([createdAt])
+  @@index([sequence])
 }
 
 model DisputeCase {
@@ -274,4 +290,27 @@ model MockProviderRecord {
   webhookSent             Boolean  @default(false)
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
+}
+
+
+/// Runtime risk controls. A single row (id = "default") that operators can
+/// change without a deploy, because the moment you need a kill switch is
+/// never the moment you can wait for a release.
+model RiskControl {
+  id                       String   @id @default("default")
+  /// When true, no payment may be submitted to the provider for any reason.
+  killSwitchEngaged        Boolean  @default(false)
+  killSwitchReason         String?
+  killSwitchEngagedBy      String?
+  killSwitchEngagedAt      DateTime?
+  /// Total value that may be advanced across all suppliers in one day.
+  dailyExposureLimitPaise  Int      @default(100000000)
+  /// Largest single advance.
+  perTransactionCapPaise   Int      @default(15000000)
+  /// Advances at or above this size require a second approver.
+  dualApprovalThresholdPaise Int    @default(7500000)
+  /// Most that may be outstanding to any one supplier at once.
+  perSupplierLimitPaise    Int      @default(30000000)
+  updatedAt                DateTime @updatedAt
+  updatedBy                String?
 }

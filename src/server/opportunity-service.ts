@@ -6,6 +6,10 @@ import { createAuditEvent } from "@/src/lib/audit";
 import { generateRequestFingerprint } from "@/src/lib/idempotency";
 import { assertOpportunityTransition } from "@/src/lib/state-machine";
 import { assertLedgerBalanced } from "@/src/lib/ledger/trial-balance";
+import {
+  checkRiskControls,
+  RiskControlError,
+} from "@/src/lib/risk/controls";
 import { FeatureSnapshot } from "@/src/lib/ml/model-artifact";
 import { buildFeatures } from "@/src/lib/ml/features";
 
@@ -146,6 +150,37 @@ export async function approveOpportunity(
     "APPROVED"
   );
 
+  /*
+   * Risk controls run before anything is written.
+   *
+   * The model decided this supplier needs cash and policy decided the price is
+   * fair, but neither of them knows how much has already gone out today. These
+   * limits are the ones that must hold even if the model is wrong, the feature
+   * pipeline is broken, or an operator has been talked into something.
+   */
+  const risk = await checkRiskControls(
+    opportunity.supplierId,
+    opportunity.expectedBenefitPaise
+  );
+
+  if (!risk.allowed) {
+    throw new RiskControlError(
+      risk.violations.map((v) => v.message).join(" "),
+      risk.violations
+    );
+  }
+
+  /*
+   * Maker-checker: above the threshold, the operator who approves is only the
+   * maker. The payment is created but parked in PENDING_APPROVAL until a
+   * second, different person signs it off. One person must never be able to
+   * move a large sum alone.
+   */
+  const requiresDualApproval = risk.requiresDualApproval;
+  const initialStatus = requiresDualApproval
+    ? "PENDING_APPROVAL"
+    : "INTENT_CREATED";
+
   // Prepare all data before transaction
   const correlationId = generateId("corr");
   const paymentIntentId = generateId();
@@ -174,11 +209,16 @@ export async function approveOpportunity(
         operationType: "DISCOUNT_PAYOUT",
         amountPaise: opportunity.expectedBenefitPaise,
         currency: "INR",
-        status: "INTENT_CREATED",
+        status: initialStatus,
         requestFingerprint,
         providerIdempotencyKey,
         correlationId,
         supplierId: opportunity.supplierId,
+        makerId: operatorId,
+        approvalThresholdPaise: requiresDualApproval
+          ? risk.limits.dualApprovalThresholdPaise
+          : null,
+        approvedAt: requiresDualApproval ? null : new Date(),
       },
     });
 
@@ -210,25 +250,29 @@ export async function approveOpportunity(
       },
     });
 
-    // 3. Create audit event
-    await tx.auditEvent.create({
-      data: {
-        id: generateId(),
+    // 3. Create audit event, inside the transaction so it commits with the
+    //    change it describes. Goes through createAuditEvent so the hash chain
+    //    is extended rather than bypassed.
+    await createAuditEvent(
+      {
         eventType: "OPPORTUNITY_APPROVED",
         actorType: "OPERATOR",
         actorId: operatorId,
         aggregateType: "OPPORTUNITY",
         aggregateId: opportunityId,
-        payloadJson: JSON.stringify({
+        payload: {
           payment_intent_id: paymentIntentId,
           correlation_id: correlationId,
-        }),
+          amount_paise: opportunity.expectedBenefitPaise,
+          requires_dual_approval: requiresDualApproval,
+        },
         modelVersion: opportunity.modelVersion,
         policyVersion: opportunity.policyVersion,
         correlationId,
         supplierId: opportunity.supplierId,
       },
-    });
+      tx
+    );
 
     // 4. Create outbox event for eventual publishing
     await tx.outboxEvent.create({
@@ -262,7 +306,81 @@ export async function approveOpportunity(
 
   return {
     paymentIntentId: result.id,
-    status: "INTENT_CREATED",
+    status: initialStatus,
     correlationId,
+    requiresDualApproval,
+    dualApprovalThresholdPaise: risk.limits.dualApprovalThresholdPaise,
   };
+}
+
+/**
+ * Second approval for a payment held above the maker-checker threshold.
+ *
+ * The checker must be a different person from the maker. This is enforced here
+ * rather than in the UI, because a control that only exists in the interface is
+ * not a control.
+ */
+export async function confirmSecondApproval(
+  paymentIntentId: string,
+  checkerId: string
+) {
+  const payment = await prisma.paymentIntent.findUnique({
+    where: { id: paymentIntentId },
+  });
+
+  if (!payment) {
+    throw new Error(`Payment not found: ${paymentIntentId}`);
+  }
+
+  if (payment.status !== "PENDING_APPROVAL") {
+    throw new Error(
+      `Payment ${paymentIntentId} is not awaiting a second approval (status: ${payment.status})`
+    );
+  }
+
+  if (payment.makerId && payment.makerId === checkerId) {
+    throw new Error(
+      "The second approver must be a different person from the one who raised this payment."
+    );
+  }
+
+  // Re-check the limits: time has passed, and today's exposure may have moved.
+  const risk = await checkRiskControls(payment.supplierId, payment.amountPaise);
+  if (!risk.allowed) {
+    throw new RiskControlError(
+      risk.violations.map((v) => v.message).join(" "),
+      risk.violations
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.paymentIntent.update({
+      where: { id: paymentIntentId },
+      data: {
+        status: "INTENT_CREATED",
+        checkerId,
+        approvedAt: new Date(),
+      },
+    });
+
+    await createAuditEvent(
+      {
+        eventType: "SECOND_APPROVAL_GRANTED",
+        actorType: "OPERATOR",
+        actorId: checkerId,
+        aggregateType: "PAYMENT_INTENT",
+        aggregateId: paymentIntentId,
+        payload: {
+          maker: payment.makerId,
+          checker: checkerId,
+          amount_paise: payment.amountPaise,
+        },
+        correlationId: payment.correlationId,
+        supplierId: payment.supplierId,
+      },
+      tx
+    );
+  });
+
+  return { paymentIntentId, status: "INTENT_CREATED", checkerId };
 }
