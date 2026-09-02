@@ -1,192 +1,205 @@
-# Equilibrium — 2-Minute Demo Script
+# Five-minute demo script
 
-**Duration**: 2 minutes  
-**Audience**: Technical decision-makers, fintech engineers  
-**Goal**: Show how bounded intelligence + policy controls = safer payment operations
+Shot-by-shot for the submission video. Timings are targets, not a straitjacket —
+the two things that must survive any cut are **the problem** (0:00–0:35) and
+**the timeout surviving reconciliation** (2:20–3:30).
 
----
+**Before recording**
 
-## [0:00-0:20] Problem Statement
+```bash
+npm run db:seed     # 6 suppliers, 30 days of history each
+npm run dev
+```
 
-"In marketplace lending, we ask: Should we offer early payment to this supplier?
-
-Every decision has tradeoffs:
-- **Too conservative**: Miss revenue opportunities
-- **Too aggressive**: Risk bad debts and financial loss
-
-Equilibrium shows how to make these decisions *safely*.
-
-Let me show you..."
-
-*(Open browser, navigate to localhost:3000)*
+Then open <http://localhost:3000> and, on `/dashboard/demo`, click **Clear** so
+the walkthrough starts unrun. Record at 1440×900 or wider.
 
 ---
 
-## [0:20-0:45] The Recommendation
+## 0:00 – 0:35 · The problem
 
-"Here's Aarav Industrial Components. Our system analyzed their cash flow for 30 days:
+**Screen:** the landing page, top of the hero.
 
-- Volatility is elevated (unpredictable incoming cash)
-- Runway is low (only 2-3 days of operating capital)
-- They've been with us 1,250 days (trustworthy tenure)
+> "A supplier delivers goods on Monday and gets paid thirty days later. Payroll
+> is on Friday. That gap kills otherwise-healthy businesses, and it's the
+> single biggest cause of MSME failure in India."
 
-Our ML model says: 78% probability they'll need liquidity within 7 days."
+**Scroll to the concrete case.**
 
-*(Click Opportunities → Aarav → View Details)*
+> "Aarav Industrial Components is owed one lakh fifty thousand rupees, due in
+> twenty-seven days. At their current burn rate they run out of cash in two and
+> a half days. They aren't insolvent — they're illiquid. That's a fixable
+> problem."
 
-**Show**:
-- Model probability: 78%
-- Expected benefit: ₹1,500 (what we save by preventing customer churn)
-- Policy decision: **Approved** (hard caps are within limits)
+**Point at the three cards.**
 
----
-
-## [0:45-1:15] Safe Approval & Execution
-
-"The finance team reviews this recommendation and approves it. Watch what happens internally:
-
-1. We create a **payment intent** (immutable record)
-2. We book the **ledger** (balanced debit/credit)
-3. We send to **the provider** (Razorpay)
-4. The provider confirms (**CONFIRMED** status)"
-
-*(Click Approve Opportunity → confirm)*
-
-**Show**:
-- Payment created with correlation ID
-- Redirect to Payment Operations
-- Status: `SUBMITTED` → `CONFIRMED`
-- Ledger entries: Debit PLATFORM_CASH, Credit SUPPLIER_PAYABLE (₹1,500)
+> "Their alternative is borrowing at twenty-four percent. Equilibrium pays them
+> one lakh forty-eight thousand two hundred today. The platform earns eighteen
+> hundred rupees on cash it was holding idle. Both sides are better off."
 
 ---
 
-## [1:15-1:40] The Safety: Reconciliation
+## 0:35 – 1:05 · Why it's hard
 
-"Now here's where **Equilibrium gets interesting**.
+**Screen:** scroll to "Deciding to pay is easy."
 
-What if the provider said 'yes' but our client timed out? We'd have ₹1,500 pending forever.
+> "Deciding to pay is the easy part. The engineering problem starts the moment
+> real money moves — a provider times out after the money's already gone, a
+> webhook arrives twice, our books and the provider's disagree by two rupees.
+> Every one of those has to be survivable, and provably so."
 
-Watch what reconciliation does..."
-
-*(Click Reconciliation → Run Reconciliation)*
-
-**Show**:
-- "Matched" outcome appears
-- Internal vs. External: Both confirmed, amounts equal
-- Case resolved automatically
-
-"Reconciliation compared our internal record against the provider's record.
-
-If there was an **amount mismatch** or **status mismatch**, it would flag it for manual review—never silently fix the books."
+Let the six guarantees sit on screen for a beat. Don't read them all.
 
 ---
 
-## [1:40-2:00] The Boundaries
+## 1:05 – 1:50 · The decision, explained
 
-"Equilibrium shows what's possible with fintech operational controls. But it's a prototype.
+**Screen:** `/dashboard/opportunities` → open the highest-risk supplier.
 
-*(Navigate to Scope & Controls)*
+> "The model flags Kaveri Logistics at sixty-four percent risk of a shortfall
+> inside a week."
 
-**Demonstrated:**
-- ML predictions
-- Hard policy caps
-- Safe provider integration
-- Balanced accounting
-- Reconciliation & mismatch detection
+**Point at the runway chart.**
 
-**Designed but not implemented:**
-- Live Razorpay adapter
-- Multi-tenant isolation
-- Full KYC/AML
-- Escrow operations
+> "Thirty days of cash runway, sliding from twelve days to under two. That
+> dotted line is one week of cover."
 
-**Not in scope:**
-- Production compliance
-- Real customer data
-- Real money settlement
+**Point at the explanation panel.**
 
-**The point**: We've proven the architecture. The business logic is sound. The controls work. Now you'd add the compliance layer for production."
+> "And here's *why*. These aren't approximations — a logistic regression is
+> additive in log-odds, so every prediction decomposes into exact per-feature
+> contributions. Cash runway is the biggest driver, then unreliable customer
+> payments. Cash on hand pulls the other way."
 
----
+**Point at the counterfactual.**
 
-## [2:00] Close
+> "It even tells you what would change the answer: at ten days of runway
+> instead of one point seven, we wouldn't make an offer at all."
 
-"Equilibrium is bounded intelligence in action:
+**Point at the deal card.**
 
-- **ML makes recommendations** (not decisions)
-- **Policy enforces hard limits** (cannot be overridden)
-- **Humans approve** (final authority)
-- **Reconciliation detects problems** (before they become losses)
-
-That's how you build safer payment operations.
-
-Questions?"
+> "And the price, in rupees. One-point-two percent sounds small — annualized
+> it's sixteen point two percent. We show that next to the headline everywhere,
+> because quoting only the headline is how suppliers get quietly overcharged."
 
 ---
 
-## Optional Deep-Dives
+## 1:50 – 2:20 · Approve, and the controls that fire
 
-### If Asked: "How does it handle timeouts?"
+**Screen:** click **Approve and pay**.
 
-"Good question. Show the UNKNOWN state:
+> "One database transaction writes the payment intent, balanced double-entry
+> ledger rows, a hash-chained audit record, and the outbox event. All of it
+> commits together or none of it does."
 
-In the mock provider, we can simulate a timeout *after* the provider confirms. Internally, we get `UNKNOWN`. We don't mark it failed—we mark it ambiguous.
+**When the maker-checker banner appears** (it will, above ₹75,000):
 
-Then reconciliation resolves it: 'Provider says CONFIRMED, we say UNKNOWN → update to CONFIRMED.'"
+> "This one's above the dual-approval threshold, so it's held. The operator who
+> raised it *cannot* release it — that's enforced in the service, not the
+> interface. A second approver has to sign it off."
 
-### If Asked: "What about fraud?"
-
-"Equilibrium doesn't do fraud detection. But the architecture supports it:
-
-Each decision is versioned (model version, policy version, feature snapshot). You could audit 'why did we approve this?'
-
-And reconciliation would catch patterns like 'we always approve, provider always declines.'"
-
-### If Asked: "How does it scale?"
-
-"In the demo, it's SQLite. For production:
-
-- Postgres replaces SQLite
-- Redis Streams replaces the local event log
-- Background workers publish events
-- Everything else stays the same—we designed for this"
+Click **Approve as second operator**.
 
 ---
 
-## Talking Points to Memorize
+## 2:20 – 3:30 · Break it on purpose
 
-1. **Integer arithmetic only**: All amounts in paise (no floating-point errors)
-2. **Double-entry ledger**: Every debit has a matching credit (auditable)
-3. **Idempotency**: Same request twice = same result (no double-payments)
-4. **UNKNOWN is real**: Timeouts don't disappear; reconciliation resolves them
-5. **Policy is hard**: Model confidence can't override spending caps
-6. **Immutable audit trail**: Every decision is logged with correlation ID
-7. **No silent repairs**: Reconciliation flags mismatches, doesn't fix them
-8. **Designed for production**: MockRazorpay → Real Razorpay is a swap
+**Screen:** `/dashboard/failures`.
 
----
+> "Every payments system claims to survive these. Let's actually check."
 
-## Demo Troubleshooting
+Click **Inject** on *Timeout after the money left*.
 
-| Issue | Solution |
-|-------|----------|
-| Page won't load | Run `npm run dev` in Terminal |
-| "Aarav" not showing | Reset demo: `curl -X POST http://localhost:3000/api/demo/reset -H "Content-Type: application/json" -d '{"confirm":true}'` |
-| Approval fails | Check console for error; refresh and try again |
-| Reconciliation empty | Click "Run Reconciliation" button first |
+> "The provider committed the payment, then the connection died before we heard
+> back. Watch what we record: UNKNOWN. Not success, not failure. We genuinely
+> don't know, and guessing either way is how you either pay twice or lose the
+> money."
 
----
+**Point at `ledgerBalanced: yes`.**
 
-## Follow-Up Conversation Starters
+> "Books still foot."
 
-- "How would you integrate with a real Account Aggregator?"
-- "What would KYC/AML integration look like?"
-- "How do you handle multi-currency settlements?"
-- "What's the dispute evidence workflow for chargebacks?"
-- "How would you version migrations in production?"
+Click **Inject** on *Webhook delivered twice*.
+
+> "Providers guarantee at-least-once delivery, never exactly-once. Second
+> delivery: zero net new event records. Deduplicated on the provider's event
+> id."
 
 ---
 
-**Remember**: You're not selling the product. You're showing the *thinking* behind safe fintech systems.
+## 3:30 – 4:10 · Resolve the unknown
 
-Good luck! 🚀
+**Screen:** `/dashboard/reconciliation`. Click **Run reconciliation**.
+
+> "Reconciliation asks the provider what it believes and compares field by
+> field."
+
+**Open the resolved case, point at the three columns.**
+
+> "Our books said UNKNOWN. The provider said CONFIRMED. It only repairs in the
+> one direction that's provably safe — adopting a confirmation for a payment we
+> couldn't classify. Anything else becomes an exception for a human. It never
+> guesses."
+
+---
+
+## 4:10 – 4:45 · Prove nothing was lost
+
+**Screen:** `/dashboard/ledger`.
+
+> "After two deliberately broken payments: total debits equal total credits,
+> difference zero."
+
+**Screen:** `/dashboard/controls`, scroll to the audit chain.
+
+> "The audit log is a hash chain. Let me tamper with it."
+
+Click **Tamper with a record**.
+
+> "I've just edited a historical row directly in the database, the way someone
+> covering their tracks would. The chain immediately says which entry, and how:
+> 'entry two has been modified since it was written.' Silent edits are
+> impossible."
+
+**Optional, if time:** click **Halt all payments**, show the banner.
+
+> "And one switch stops everything, without a deploy."
+
+---
+
+## 4:45 – 5:00 · Close
+
+**Screen:** terminal. Run:
+
+```bash
+npm run demo:verify
+```
+
+> "Everything I just showed you is asserted by one command — twenty-eight
+> checks, end to end, exiting non-zero if any of them fails. Nothing in this
+> project is a claim you have to take on trust."
+
+Let the `28 passed, 0 failed` land. End.
+
+---
+
+## If you only have three minutes
+
+Cut sections 2 (why it's hard) and the dispute workspace entirely. Keep:
+problem → explanation → timeout → reconciliation → trial balance → verify.
+
+## Things worth saying if a judge asks
+
+- **"Why logistic regression and not a neural net?"** Because it's additive in
+  log-odds, every prediction decomposes exactly, and the explanation shown to
+  the operator *is* the model rather than an approximation of it. For something
+  that moves money and must be explainable to an auditor, that beats a few
+  points of accuracy.
+- **"Is the model any good?"** AUC 0.959 against a 0.940 baseline, recall 95%,
+  precision roughly double the naive rule. Threshold is 0.16, not 0.50, chosen
+  by cost asymmetry — missing a distressed supplier costs far more than an
+  unnecessary offer. All of it on the model card, all reproducible with
+  `npm run ml:train`.
+- **"What's not real?"** Synthetic data, mock provider, SQLite, API-key auth
+  with a demo fallback, outbox drained by an endpoint rather than a worker.
+  Listed in the README under Honest limitations.

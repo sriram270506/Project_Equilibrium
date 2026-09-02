@@ -1,6 +1,7 @@
 import { successEnvelope, errorEnvelope } from "@/src/lib/api-envelope";
 import { assertDemoMode } from "@/src/lib/env";
 import { prisma } from "@/src/lib/prisma";
+import { LIQUIDITY_MODEL } from "@/src/lib/ml/model-artifact";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
         id: uuidv4(),
         supplierId: aarav.id,
         predictionProbability: 0.78,
-        modelVersion: "liquidity-logistic-v1-demo",
+        modelVersion: LIQUIDITY_MODEL.modelVersion,
         featureSnapshotJson: JSON.stringify({
           cashFlowVolatility: 0.18,
           daysRunwayTrend: -0.05,

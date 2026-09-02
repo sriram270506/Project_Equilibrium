@@ -1,5 +1,5 @@
 import { prisma } from "@/src/lib/prisma";
-import { evaluateModel } from "@/src/lib/ml/model-artifact";
+import { evaluateModel, LIQUIDITY_MODEL } from "@/src/lib/ml/model-artifact";
 import { evaluatePolicy } from "@/src/lib/economic-policy";
 import { generateId, generatePaymentId, generateIdempotencyKey } from "@/src/lib/ids";
 import { createAuditEvent } from "@/src/lib/audit";
@@ -82,9 +82,11 @@ export async function evaluateOpportunity(
       id: opportunityId,
       supplierId,
       predictionProbability: modelProbability,
-      modelVersion: "liquidity-logistic-v1-demo",
+      // Stamped from the artifact, not a literal, so stored provenance always
+      // names the model that actually produced the score.
+      modelVersion: LIQUIDITY_MODEL.modelVersion,
       featureSnapshotJson: JSON.stringify(features),
-      policyVersion: "policy-v1-demo",
+      policyVersion: policyEval.policyVersion,
       expectedBenefitPaise: policyEval.riskEnvelope.estimatedBenefitPaise,
       opportunityCostPaise: platformOpportunityCostPaise,
       riskCostPaise: policyEval.riskEnvelope.estimatedRiskPaise,
@@ -108,8 +110,8 @@ export async function evaluateOpportunity(
       policyDecision: policyEval.approvedByPolicy,
       expectedValue: policyEval.expectedValuePaise,
     },
-    modelVersion: "liquidity-logistic-v1-demo",
-    policyVersion: "policy-v1-demo",
+    modelVersion: LIQUIDITY_MODEL.modelVersion,
+    policyVersion: policyEval.policyVersion,
     supplierId,
   });
 

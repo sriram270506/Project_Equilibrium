@@ -19,22 +19,28 @@ Three systems maintain separate truth boundaries:
 ```
 1. Client Request
    ↓
-2. Route Handler (validate input, auth check)
+2. Route Handler — withAuth guard (role check), Zod validation
    ↓
-3. Domain Service (business logic, state transitions)
+3. Risk controls — kill switch, daily exposure, per-transaction cap,
+   per-supplier limit. Checked BEFORE any write.
    ↓
-4. Prisma Transaction (atomically create/update entities)
+4. Maker-checker — above the dual-approval threshold the payment is created
+   in PENDING_APPROVAL and a second, different operator must confirm.
+   ↓
+5. Domain Service (business logic, state transitions)
+   ↓
+6. Prisma Transaction (atomically create/update entities)
    ├─ Create/update primary entity
    ├─ Create ledger entries (balanced)
    ├─ Create audit event
    └─ Create outbox event (eventual publishing)
    ↓
-5. Provider Integration (call external service)
+7. Provider Integration (call external service)
    ├─ Idempotency check (fingerprint + key)
    ├─ Submit operation
    └─ Update internal state based on result
    ↓
-6. Return Response (200, 201, 400, 409, 422, 500)
+8. Return Response (200, 201, 400, 401, 403, 409, 500)
 ```
 
 ### 3. Provider Adapter Pattern
@@ -60,9 +66,13 @@ interface PaymentProvider {
 #### PaymentIntent Lifecycle
 
 ```
+PENDING_APPROVAL (only above the dual-approval threshold)
+    ↓
 INTENT_CREATED
     ↓
-    ├─→ SUBMITTED (sent to provider)
+    ├─→ SUBMITTED (written BEFORE the provider call, so a crash mid-call
+    │              leaves a payment reconciliation actively sweeps rather
+    │              than an invisible orphan)
     │     ├─→ ACKNOWLEDGED (provider accepted)
     │     │     ├─→ CONFIRMED (executed successfully)
     │     │     │     └─→ [TERMINAL]
@@ -187,36 +197,52 @@ All linked by single `correlationId`.
 
 ### 8. ML Model Integration
 
-**Model Artifact** (`src/lib/ml/model-artifact.ts`):
-```typescript
-{
-  modelVersion: "liquidity-logistic-v1-demo",
-  features: ["cashFlowVolatility", "daysRunwayTrend", ...],
-  coefficients: {...},
-  intercept: 0.5,
-  calibrationNote: "Demo model. Not production trained."
-}
-```
+**The model is fitted, not hand-written.** `scripts/train-model.ts`
+(`npm run ml:train`) generates synthetic supplier cash flows, simulates seven
+days forward to derive a ground-truth label, fits a logistic regression by
+gradient descent on a 75/25 split, and writes
+`src/lib/ml/model-artifact.generated.json`. The application loads that file, so
+the coefficients it scores with are exactly the ones that were evaluated.
 
-**Logistic Evaluation**:
-```
-logit = intercept + Σ(coefficient × feature)
-probability = sigmoid(logit) = 1 / (1 + e^-logit)
-```
+An earlier hand-specified version of this model had a feature and its
+coefficient double-negated, so more cash runway predicted *more* distress and
+every supplier scored 99%. Fitting removes that whole class of error: a training
+loop cannot learn a sign that contradicts its own data.
 
-**Versioning**:
-- Every opportunity stores `modelVersion` and `featureSnapshotJson`
-- Allows backtracking: "Why was this opportunity recommended?"
-- Supports model drift detection
+**Features** (`src/lib/ml/features.ts`, shared by training and serving so the
+two cannot drift apart — all normalised to roughly [0, 1]):
 
-**Policy Integration**:
-```
-Model probability → Economic policy evaluation
-  ├─ Hard caps applied (regardless of model confidence)
-  ├─ Expected value calculated
-  ├─ Policy decision: APPROVE or REJECT
-  └─ Reason documented (for audit)
-```
+| Feature | Meaning | Fitted weight |
+|---|---|---|
+| `cashFlowVolatility` | How much daily cash swings | +0.158 |
+| `runwayPressure` | 1 at zero cash, 0 at 14 days of cover | +3.633 |
+| `paymentIrregularity` | How unreliably their customers pay | +3.022 |
+| `balanceCoverage` | Cash against a week of outflow | −4.551 |
+| `tenureYears` | Relationship length over five years | +0.066 |
+
+**Held-out performance**: AUC 0.959 (baseline `runway < 7d`: 0.940), recall 95%,
+precision 43% (baseline 23%).
+
+**Threshold selection.** The action threshold is 0.16, not 0.50. The two errors
+are not symmetric — a false positive offers cheap capital to someone who did not
+strictly need it, a false negative means a supplier misses payroll. The
+threshold is chosen by sweeping candidates and maximising a recall-weighted
+F-score (β = 3) on the training split, subject to a precision floor. At 0.50
+this model recalls 15% of distressed suppliers.
+
+`DEFAULT_POLICY_CONSTRAINTS.minModelProbability` reads that same threshold from
+the artifact, so policy and model cannot disagree about what counts as at-risk.
+
+**Explainability** (`src/lib/ml/explain.ts`): because a logistic regression is
+additive in log-odds, `explainPrediction` decomposes any prediction into exact
+per-feature contributions that sum to the logit — no SHAP sampling, no surrogate
+model. It also sweeps runway to produce a counterfactual: what would have to be
+different for the decision to flip.
+
+**Provenance**: every opportunity stores `featureSnapshotJson` and
+`modelVersion`, and the offer detail page recomputes its explanation from the
+*stored* snapshot — so reopening a decision months later shows why it was made
+then, not what would be decided today.
 
 ### 9. Reconciliation Flow
 
@@ -287,6 +313,92 @@ Reconcile Case: MATCHED (issue resolved)
 
 **Replay Safety**: Sequence numbers + idempotency keys prevent replaying same event.
 
+### 11. Authentication and Authorisation
+
+`src/lib/auth/guard.ts`. Every mutating route is wrapped in `withAuth(role,
+handler)`, which resolves the caller from an API key (`Authorization: Bearer` or
+`X-API-Key`) and refuses the request if their role is insufficient.
+
+**Identity comes from the credential, never from the payload.** The approving
+operator used to be read from the request body, which meant the audit trail
+recorded whatever the caller claimed — worse than no audit trail, because it
+looks trustworthy.
+
+Roles are ordered: `VIEWER` < `OPERATOR` < `APPROVER` < `ADMIN`.
+
+| Route | Requires |
+|---|---|
+| `POST /api/opportunities/:id/approve` | OPERATOR |
+| `POST /api/payments/:id/approve` (checker) | APPROVER |
+| `POST /api/demo/inject` | OPERATOR |
+| `PATCH /api/risk` | ADMIN |
+| `POST /api/audit` (tamper test) | ADMIN |
+
+In demo mode an unauthenticated request is accepted as the seeded operator so
+the walkthrough works from a browser without key management. That fallback is
+disabled outside demo mode — a convenience that silently survives into
+production is a vulnerability, so it fails closed.
+
+### 12. Risk Controls
+
+`src/lib/risk/controls.ts`. The limits that hold regardless of what the model
+believes, checked before any write:
+
+| Control | Default | Purpose |
+|---|---|---|
+| Kill switch | off | Halts every outbound payment immediately |
+| Daily exposure | ₹10,00,000 | Total advanced across all suppliers in a day |
+| Per-transaction cap | ₹1,50,000 | Largest single advance |
+| Per-supplier limit | ₹3,00,000 | Most outstanding to one counterparty |
+| Dual-approval threshold | ₹75,000 | Above this, a second approver is required |
+
+They live in a database row rather than in code because the moment you need a
+kill switch is never the moment you can wait for a deploy. Every change writes
+an audit entry naming who made it.
+
+**Today's exposure counts `UNKNOWN` payments.** A payment we cannot classify may
+well have moved money, and a limit that ignored it could be breached invisibly
+by a run of timeouts.
+
+**Maker-checker**: advances at or above the threshold are created in
+`PENDING_APPROVAL`. `confirmSecondApproval` refuses if the checker is the same
+person as the maker, and re-checks the limits before releasing — time has passed
+and today's exposure may have moved. The refusal is in the service, not the UI,
+because a control that only exists in the interface is not a control.
+
+### 13. Tamper-Evident Audit Log
+
+`src/lib/audit.ts`. "Immutable" is a promise most systems make and none can
+prove: rows can always be updated by whoever holds the credentials. Instead,
+tampering is made *detectable*.
+
+```
+entryHash = SHA256(
+  sequence ‖ eventType ‖ actorType ‖ actorId ‖ aggregateType ‖
+  aggregateId ‖ payloadJson ‖ correlationId ‖ createdAt ‖ previousHash
+)
+```
+
+Each entry chains to its predecessor, so:
+
+- editing a historical row → its hash no longer matches → `CONTENT_ALTERED`
+- pointing at the wrong predecessor → `CHAIN_BROKEN`
+- deleting a row → gap in the global sequence → `SEQUENCE_GAP`
+
+`verifyAuditChain()` walks the whole log and reports the first break with its
+sequence number and reason. `POST /api/audit` (demo mode, ADMIN) deliberately
+corrupts an entry so the property can be demonstrated rather than asserted.
+
+**What this does not prove**: a determined attacker with write access could
+recompute the entire chain. What it makes impossible is a *silent* edit, which
+in practice is the difference between an audit log and a table of hopes.
+
+Audit entries are written through `createAuditEvent(input, tx)` and pass the
+transaction client so they commit with the change they describe. Writing to
+`prisma.auditEvent` directly would leave an entry with no valid hash — the type
+system now rejects that, since `sequence`, `previousHash` and `entryHash` are
+required columns.
+
 ## Type Safety & Validation
 
 ### Zod Schemas
@@ -323,7 +435,7 @@ export async function POST(request: NextRequest) {
 ```
 
 Benefits:
-- No `any` types in financial code
+- No `any` types in the money path (`src/lib/money.ts`, ledger, policy)
 - Null coalescing required
 - Exhaustive switch statements
 
@@ -365,12 +477,18 @@ Schema includes indexes on:
 
 ### For Production
 
-1. **Database**: Replace SQLite with Postgres
+1. **Database**: Replace SQLite with Postgres and adopt a migration history
+   (currently `prisma db push`, no `prisma/migrations/`)
 2. **Event Transport**: Replace local event table with Redis Streams
 3. **Provider**: Replace MockRazorpay with live Razorpay adapter
-4. **Webhooks**: Implement real webhook receiver + signature verification
+4. **Webhooks**: Done — `POST /api/webhooks/razorpay` verifies HMAC-SHA256
+   with a timing-safe comparison and deduplicates on the provider event id.
+   Remaining: the signature check accepts all requests when the secret is
+   unset, which is fine for the demo but must fail closed in production.
 5. **Secrets**: Use AWS Secrets Manager or HashiCorp Vault
-6. **Background Workers**: Deploy outbox publisher as separate service
+6. **Background Workers**: The outbox publisher exists and is wired to
+   `POST /api/internal/events/publish`; it still needs to run as a scheduled
+   worker rather than being triggered by a request.
 7. **Observability**: Add DataDog/Honeycomb tracing
 8. **Compliance**: Formal security audit, PCI-DSS certification
 
