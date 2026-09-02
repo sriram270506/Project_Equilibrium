@@ -9,7 +9,7 @@ interface PaymentDetail {
   id: string;
   internalReference: string;
   supplier: { name: string; email: string };
-  amount: number;
+  amountPaise: number;
   amountDisplay: string;
   status: string;
   provider: string;
@@ -112,7 +112,7 @@ export default function PaymentDetailPage({
           <section>
             <h2 className="text-lg font-semibold mb-4">Amount</h2>
             <p className="text-3xl font-bold text-emerald-600">
-              {formatPaise(payment.amount)}
+              {formatPaise(payment.amountPaise)}
             </p>
           </section>
 
