@@ -5,7 +5,8 @@ import { generateId, generatePaymentId, generateIdempotencyKey } from "@/src/lib
 import { createAuditEvent } from "@/src/lib/audit";
 import { createOutboxEvent } from "@/src/lib/events/event-service";
 import { generateRequestFingerprint } from "@/src/lib/idempotency";
-import { assertOpportunityTransition } from "@/src/lib/state-machine";
+import { assertOpportunityTransition, assertPaymentTransition } from "@/src/lib/state-machine";
+import { assertLedgerBalanced } from "@/src/lib/ledger/trial-balance";
 import { FeatureSnapshot } from "@/src/lib/ml/model-artifact";
 
 /**
@@ -253,6 +254,9 @@ export async function approveOpportunity(
 
     return paymentIntent;
   });
+
+  // Verify ledger invariant after transaction
+  await assertLedgerBalanced();
 
   return {
     paymentIntentId: result.id,
