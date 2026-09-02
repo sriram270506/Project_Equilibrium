@@ -249,13 +249,14 @@ model DemoScenario {
 }
 
 model MockProviderRecord {
-  id              String   @id
-  providerPaymentId String @unique
-  providerOrderId String?
-  amountPaise     Int
-  status          String
-  failureMode     String?
-  webhookSent     Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                      String   @id
+  providerPaymentId       String   @unique
+  providerIdempotencyKey  String   @unique
+  providerOrderId         String?
+  amountPaise             Int
+  status                  String
+  failureMode             String?
+  webhookSent             Boolean  @default(false)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 }

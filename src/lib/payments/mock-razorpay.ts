@@ -69,9 +69,9 @@ export class MockRazorpay implements PaymentProvider {
     const providerPaymentId = `pay_demo_${generateId().slice(0, 20)}`;
     const providerOrderId = `ord_demo_${generateId().slice(0, 20)}`;
 
-    // Check for idempotency conflicts
+    // Check for idempotency conflicts (by idempotency key)
     const existingRecord = await prisma.mockProviderRecord.findUnique({
-      where: { providerPaymentId: input.providerIdempotencyKey },
+      where: { providerIdempotencyKey: input.providerIdempotencyKey },
     });
 
     if (existingRecord) {
@@ -107,10 +107,12 @@ export class MockRazorpay implements PaymentProvider {
     }
 
     // Store in mock provider record for reconciliation
+    // Key: providerPaymentId (what we return), also store idempotency key for dedup
     await prisma.mockProviderRecord.create({
       data: {
         id: generateId(),
-        providerPaymentId: input.providerIdempotencyKey,
+        providerPaymentId,
+        providerIdempotencyKey: input.providerIdempotencyKey,
         providerOrderId,
         amountPaise: input.amountPaise,
         status,
