@@ -7,6 +7,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Authentication and authorization
+model User {
+  id        String   @id
+  email     String   @unique
+  name      String
+  role      String   // VIEWER, OPERATOR, APPROVER, ADMIN
+  apiKey    String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([isActive])
+}
+
 model Supplier {
   id                    String                    @id
   name                  String

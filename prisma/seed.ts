@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 // @ts-ignore - uuid types
 import { v4 as uuidv4 } from "uuid";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -8,6 +9,7 @@ async function main() {
   console.log("🌱 Starting database seed...");
 
   // Clear existing data
+  await prisma.user.deleteMany();
   await prisma.mockProviderRecord.deleteMany();
   await prisma.demoScenario.deleteMany();
   await prisma.reconciliationCase.deleteMany();
@@ -24,6 +26,47 @@ async function main() {
   await prisma.liquidityOpportunity.deleteMany();
   await prisma.liquidityObservation.deleteMany();
   await prisma.supplier.deleteMany();
+
+  // Create demo users
+  const users = await Promise.all([
+    prisma.user.create({
+      data: {
+        id: "user_viewer_demo",
+        email: "viewer@demo.local",
+        name: "Viewer Demo",
+        role: "VIEWER",
+        apiKey: "key_viewer_demo_12345",
+      },
+    }),
+    prisma.user.create({
+      data: {
+        id: "user_operator_demo",
+        email: "operator@demo.local",
+        name: "Operator Demo",
+        role: "OPERATOR",
+        apiKey: "key_operator_demo_12345",
+      },
+    }),
+    prisma.user.create({
+      data: {
+        id: "user_approver_demo",
+        email: "approver@demo.local",
+        name: "Approver Demo",
+        role: "APPROVER",
+        apiKey: "key_approver_demo_12345",
+      },
+    }),
+    prisma.user.create({
+      data: {
+        id: "user_admin_demo",
+        email: "admin@demo.local",
+        name: "Admin Demo",
+        role: "ADMIN",
+        apiKey: "key_admin_demo_12345",
+      },
+    }),
+  ]);
+  console.log(`✅ Created ${users.length} demo users`);
 
   // Create suppliers
   const suppliers = await Promise.all([
