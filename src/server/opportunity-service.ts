@@ -5,6 +5,7 @@ import { generateId, generatePaymentId, generateIdempotencyKey } from "@/src/lib
 import { createAuditEvent } from "@/src/lib/audit";
 import { createOutboxEvent } from "@/src/lib/events/event-service";
 import { generateRequestFingerprint } from "@/src/lib/idempotency";
+import { assertOpportunityTransition } from "@/src/lib/state-machine";
 import { FeatureSnapshot } from "@/src/lib/ml/model-artifact";
 
 /**
@@ -135,6 +136,12 @@ export async function approveOpportunity(
       `Cannot approve opportunity with status: ${opportunity.status}`
     );
   }
+
+  // Validate state transition
+  assertOpportunityTransition(
+    opportunity.status as any,
+    "APPROVED"
+  );
 
   // Prepare all data before transaction
   const correlationId = generateId("corr");

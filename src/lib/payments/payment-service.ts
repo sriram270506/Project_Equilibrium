@@ -2,6 +2,7 @@ import { prisma } from "../prisma";
 import { mockRazorpay } from "./mock-razorpay";
 import { CreateOperationInput } from "./provider-types";
 import { createAuditEvent } from "../audit";
+import { assertPaymentTransition } from "../state-machine";
 
 /**
  * Pure helper: Determine payment status from provider result
@@ -75,7 +76,7 @@ export async function submitPaymentToProvider(
   // Submit to provider
   const providerResult = await mockRazorpay.createOperation(operationInput);
 
-  // Update payment intent
+  // Update payment intent with state machine validation
   let newStatus = "SUBMITTED";
   if (providerResult.status === "CONFIRMED") {
     newStatus = "CONFIRMED";
@@ -87,6 +88,12 @@ export async function submitPaymentToProvider(
   ) {
     newStatus = "UNKNOWN";
   }
+
+  // Validate state transition
+  assertPaymentTransition(
+    payment.status as any,
+    newStatus as any
+  );
 
   await prisma.paymentIntent.update({
     where: { id: paymentIntentId },
@@ -195,6 +202,12 @@ export async function simulateWebhook(paymentIntentId: string) {
 
   // Process webhook (in real app, this would come from provider)
   if (webhook.status === "payment.confirmed") {
+    // Validate state transition
+    assertPaymentTransition(
+      payment.status as any,
+      "CONFIRMED"
+    );
+    
     await prisma.paymentIntent.update({
       where: { id: paymentIntentId },
       data: {
