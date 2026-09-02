@@ -1,7 +1,9 @@
 import { PrismaClient } from "@prisma/client";
-// @ts-ignore - uuid types
 import { v4 as uuidv4 } from "uuid";
-import { PrismaClient } from "@prisma/client";
+import {
+  SUPPLIER_PROFILES,
+  generateObservations,
+} from "../src/lib/demo/supplier-profiles";
 
 const prisma = new PrismaClient();
 
@@ -68,85 +70,47 @@ async function main() {
   ]);
   console.log(`✅ Created ${users.length} demo users`);
 
-  // Create suppliers
-  const suppliers = await Promise.all([
-    prisma.supplier.create({
-      data: {
-        id: uuidv4(),
-        name: "Aarav Industrial Components",
-        email: "finance@aarav.in",
-        riskTier: "LOW",
-      },
-    }),
-    prisma.supplier.create({
-      data: {
-        id: uuidv4(),
-        name: "Nila Packaging Works",
-        email: "admin@nila.in",
-        riskTier: "MEDIUM",
-      },
-    }),
-    prisma.supplier.create({
-      data: {
-        id: uuidv4(),
-        name: "Saffron Retail Supply",
-        email: "ops@saffron.in",
-        riskTier: "MEDIUM",
-      },
-    }),
-    prisma.supplier.create({
-      data: {
-        id: uuidv4(),
-        name: "Meridian Home Goods",
-        email: "finance@meridian.in",
-        riskTier: "LOW",
-      },
-    }),
-    prisma.supplier.create({
-      data: {
-        id: uuidv4(),
-        name: "Kaveri Logistics Parts",
-        email: "billing@kaveri.in",
-        riskTier: "HIGH",
-      },
-    }),
-    prisma.supplier.create({
-      data: {
-        id: uuidv4(),
-        name: "Orbit Kitchenware",
-        email: "finance@orbit.in",
-        riskTier: "MEDIUM",
-      },
-    }),
-  ]);
-
-  console.log(`✅ Created ${suppliers.length} suppliers`);
-
-  // Create liquidity observations
-  const aarav = suppliers[0];
+  // Create suppliers and their cash-flow history from shared profiles, so the
+  // seed and the demo reset endpoint can never disagree about the cast.
+  const suppliers = [];
   const now = new Date();
+  let observationCount = 0;
 
-  for (let i = 30; i >= 0; i--) {
-    const observedAt = new Date(now);
-    observedAt.setDate(observedAt.getDate() - i);
+  for (let i = 0; i < SUPPLIER_PROFILES.length; i++) {
+    const profile = SUPPLIER_PROFILES[i];
 
-    await prisma.liquidityObservation.create({
+    // Backdate creation so relationship tenure is a real feature, not a constant.
+    const createdAt = new Date(now);
+    createdAt.setDate(createdAt.getDate() - (180 + i * 240));
+
+    const supplier = await prisma.supplier.create({
       data: {
         id: uuidv4(),
-        supplierId: aarav.id,
-        observedAt,
-        availableBalancePaise: 500000 + Math.random() * 100000,
-        inflowPaise: 200000 + Math.random() * 50000,
-        outflowPaise: 250000 + Math.random() * 50000,
-        daysRunway: 2.5 + Math.random() * 2,
-        paymentRegularity: 0.85 + Math.random() * 0.1,
-        volatility: 0.15 + Math.random() * 0.1,
-        source: "DEMO_SYNTHETIC",
+        name: profile.name,
+        email: profile.email,
+        riskTier: profile.riskTier,
+        createdAt,
       },
     });
+    suppliers.push(supplier);
+
+    const observations = generateObservations(profile, i + 1, now);
+    for (const observation of observations) {
+      await prisma.liquidityObservation.create({
+        data: {
+          id: uuidv4(),
+          supplierId: supplier.id,
+          ...observation,
+        },
+      });
+      observationCount++;
+    }
   }
 
-  console.log("✅ Created liquidity observations");
+  console.log(`✅ Created ${suppliers.length} suppliers`);
+  console.log(`✅ Created ${observationCount} liquidity observations`);
+
+  const aarav = suppliers[0];
 
   // Create opportunities
   const opportunities = await Promise.all([

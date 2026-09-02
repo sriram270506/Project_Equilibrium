@@ -87,19 +87,28 @@ export class MockRazorpay implements PaymentProvider {
       };
     }
 
-    // Simulate provider operation
+    // Simulate provider operation.
+    // Capture the active mode BEFORE the reset below, or the result reports
+    // "success" for every injected failure.
+    const activeFailureMode = this.failureMode;
     const now = new Date();
     let status = "CONFIRMED";
     let failureReason: string | undefined;
 
-    if (this.failureMode === "timeout_after_remote_success") {
-      // Provider confirms but we don't see it
+    if (activeFailureMode === "timeout_after_remote_success") {
+      /*
+       * The nastiest real failure: the provider DID process the payment, but
+       * the connection died before we heard back. The provider's own record
+       * says CONFIRMED while the caller sees nothing. This is what creates a
+       * genuine divergence between our books and theirs - and it is exactly
+       * what reconciliation exists to detect and repair.
+       */
       status = "CONFIRMED";
-      // In real scenario, this would timeout on client
-    } else if (this.failureMode === "timeout_before_processing") {
+      failureReason = "Connection lost after the provider committed the payment";
+    } else if (activeFailureMode === "timeout_before_processing") {
       status = "UNKNOWN";
       failureReason = "Simulated timeout before provider processed";
-    } else if (this.failureMode === "provider_decline") {
+    } else if (activeFailureMode === "provider_decline") {
       status = "FAILED";
       failureReason = "Provider declined transaction";
     } else {
@@ -116,7 +125,7 @@ export class MockRazorpay implements PaymentProvider {
         providerOrderId,
         amountPaise: input.amountPaise,
         status,
-        failureMode: this.failureMode,
+        failureMode: activeFailureMode,
         webhookSent: false,
       },
     });
@@ -130,7 +139,8 @@ export class MockRazorpay implements PaymentProvider {
       status: status as any,
       amountPaise: input.amountPaise,
       currency: input.currency,
-      failureMode: failureReason ? this.failureMode : undefined,
+      failureMode:
+        activeFailureMode === "success" ? undefined : activeFailureMode,
       failureReason,
       timestamp: now,
     };

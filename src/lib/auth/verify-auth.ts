@@ -13,7 +13,7 @@ export async function verifyAuth(request: NextRequest): Promise<AuthContext | nu
 
     // Fall back to X-API-Key header
     if (!apiKey) {
-      apiKey = request.headers.get("x-api-key");
+      apiKey = request.headers.get("x-api-key") ?? undefined;
     }
 
     if (!apiKey) {

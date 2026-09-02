@@ -184,20 +184,18 @@ export async function POST(request: NextRequest) {
     await prisma.auditEvent.create({
       data: {
         id: `audit_${Date.now()}`,
-        actorId: "webhook",
-        actorType: "PROVIDER_WEBHOOK",
-        action: "WEBHOOK_RECEIVED",
-        aggregateType: "PAYMENT",
+        eventType: "WEBHOOK_RECEIVED",
+        actorId: "razorpay-webhook",
+        actorType: "PROVIDER",
+        aggregateType: "PAYMENT_INTENT",
         aggregateId: paymentIntent.id,
-        resourceType: "PaymentIntent",
-        resourceId: paymentIntent.id,
-        changes: JSON.stringify({
+        payloadJson: JSON.stringify({
           status: internalStatus,
           providerEventId: payload.eventId,
+          providerPaymentId: payload.paymentId,
         }),
         correlationId: paymentIntent.correlationId,
         supplierId: paymentIntent.supplierId,
-        createdAt: new Date(),
       },
     });
 

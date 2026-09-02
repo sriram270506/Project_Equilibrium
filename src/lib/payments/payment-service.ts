@@ -2,7 +2,7 @@ import { prisma } from "../prisma";
 import { mockRazorpay } from "./mock-razorpay";
 import { CreateOperationInput } from "./provider-types";
 import { createAuditEvent } from "../audit";
-import { assertPaymentTransition } from "../state-machine";
+import { assertPaymentTransition, PaymentStatus } from "../state-machine";
 
 /**
  * Pure helper: Determine payment status from provider result
@@ -73,27 +73,68 @@ export async function submitPaymentToProvider(
     recipientId: payment.supplierId,
   };
 
-  // Submit to provider
+  /*
+   * Record that we are about to send, BEFORE we send.
+   *
+   * If the process dies during the provider call, the payment is left in
+   * SUBMITTED - a state reconciliation actively sweeps. Marking it only after
+   * the call returns would leave a crashed payment sitting in INTENT_CREATED
+   * with money possibly already gone and nothing to alert on. Writing the
+   * intent to send first is what makes the crash recoverable.
+   */
+  assertPaymentTransition(
+    payment.status as PaymentStatus,
+    "SUBMITTED" as PaymentStatus
+  );
+
+  await prisma.paymentIntent.update({
+    where: { id: paymentIntentId },
+    data: { status: "SUBMITTED" },
+  });
+
+  await createAuditEvent({
+    eventType: "PAYMENT_SUBMITTED",
+    actorType: "SYSTEM",
+    actorId: "payment-service",
+    aggregateType: "PAYMENT_INTENT",
+    aggregateId: paymentIntentId,
+    payload: {
+      provider: payment.provider,
+      idempotency_key: payment.providerIdempotencyKey,
+      amount_paise: payment.amountPaise,
+    },
+    correlationId: payment.correlationId,
+  });
+
+  // Now make the call we may not survive.
   const providerResult = await mockRazorpay.createOperation(operationInput);
 
-  // Update payment intent with state machine validation
-  let newStatus = "SUBMITTED";
-  if (providerResult.status === "CONFIRMED") {
+  /*
+   * Map the provider's answer onto our own vocabulary.
+   *
+   * Timeouts are checked FIRST, before any success status. If the call timed
+   * out we did not receive an answer, and it does not matter what the
+   * provider's internal record happens to say - we cannot see it. Recording
+   * CONFIRMED because the provider "really did" succeed would mean trusting
+   * information we never actually received, and would skip the reconciliation
+   * that is supposed to establish the truth.
+   */
+  const timedOut =
+    providerResult.failureMode === "timeout_after_remote_success" ||
+    providerResult.failureMode === "timeout_before_processing";
+
+  let newStatus: string;
+  if (timedOut || providerResult.status === "UNKNOWN") {
+    newStatus = "UNKNOWN";
+  } else if (providerResult.status === "CONFIRMED") {
     newStatus = "CONFIRMED";
   } else if (providerResult.status === "FAILED") {
     newStatus = "FAILED";
-  } else if (
-    providerResult.status === "UNKNOWN" ||
-    providerResult.failureMode === "timeout_after_remote_success"
-  ) {
-    newStatus = "UNKNOWN";
+  } else {
+    newStatus = "SUBMITTED";
   }
 
-  // Validate state transition
-  assertPaymentTransition(
-    payment.status as any,
-    newStatus as any
-  );
+  assertPaymentTransition("SUBMITTED" as PaymentStatus, newStatus as PaymentStatus);
 
   await prisma.paymentIntent.update({
     where: { id: paymentIntentId },
@@ -106,16 +147,17 @@ export async function submitPaymentToProvider(
     },
   });
 
-  // Audit
   await createAuditEvent({
-    eventType: "PAYMENT_SUBMITTED",
-    actorType: "SYSTEM",
-    actorId: "payment-service",
+    eventType: `PAYMENT_${newStatus}`,
+    actorType: "PROVIDER",
+    actorId: mockRazorpay.getProviderName(),
     aggregateType: "PAYMENT_INTENT",
     aggregateId: paymentIntentId,
     payload: {
       provider_status: providerResult.status,
       provider_payment_id: providerResult.providerPaymentId,
+      failure_mode: providerResult.failureMode ?? null,
+      failure_reason: providerResult.failureReason ?? null,
     },
     correlationId: payment.correlationId,
   });

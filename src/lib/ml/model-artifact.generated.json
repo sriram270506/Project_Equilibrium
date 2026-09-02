@@ -1,0 +1,77 @@
+{
+  "modelVersion": "liquidity-logistic-v2",
+  "trainedAt": "2026-09-02T17:54:26.436Z",
+  "featureNames": [
+    "cashFlowVolatility",
+    "runwayPressure",
+    "paymentIrregularity",
+    "balanceCoverage",
+    "tenureYears"
+  ],
+  "coefficients": {
+    "cashFlowVolatility": 0.1584069168470133,
+    "runwayPressure": 3.6325930350738713,
+    "paymentIrregularity": 3.021930312000604,
+    "balanceCoverage": -4.551165171425265,
+    "tenureYears": 0.06587167605130559
+  },
+  "intercept": -3.856639194650561,
+  "approvalThreshold": 0.16,
+  "training": {
+    "totalSamples": 4000,
+    "trainSamples": 3000,
+    "testSamples": 1000,
+    "iterations": 4000,
+    "finalTrainLoss": 0.16081,
+    "seed": 20260902
+  },
+  "metrics": {
+    "train": {
+      "auc": 0.9582518765638032,
+      "accuracy": 0.868,
+      "precision": 0.4059097978227061,
+      "recall": 0.9490909090909091,
+      "f1": 0.5686274509803922,
+      "truePositives": 261,
+      "falsePositives": 382,
+      "trueNegatives": 2343,
+      "falseNegatives": 14,
+      "baseRate": 0.09166666666666666,
+      "threshold": 0.16
+    },
+    "test": {
+      "auc": 0.9594785847299814,
+      "accuracy": 0.862,
+      "precision": 0.4291845493562232,
+      "recall": 0.9523809523809523,
+      "f1": 0.591715976331361,
+      "truePositives": 100,
+      "falsePositives": 133,
+      "trueNegatives": 762,
+      "falseNegatives": 5,
+      "baseRate": 0.105,
+      "threshold": 0.16
+    },
+    "baseline": {
+      "auc": 0.9403564777866454,
+      "accuracy": 0.644,
+      "precision": 0.227765726681128,
+      "recall": 1,
+      "f1": 0.3710247349823322,
+      "truePositives": 105,
+      "falsePositives": 356,
+      "trueNegatives": 539,
+      "falseNegatives": 0,
+      "baseRate": 0.105,
+      "threshold": 7
+    }
+  },
+  "calibrationNote": "Fitted on synthetic cash-flow simulations, not on real supplier data. The generating process is a deliberate simplification: seven-day forward simulation with independent daily draws. Treat the probabilities as ordinal risk scores for demonstration, not as calibrated default rates. Any production use requires refitting on real observations, fairness review across supplier segments, and ongoing drift monitoring.",
+  "limitations": [
+    "Trained on generated data; no real supplier ever entered this model.",
+    "Assumes daily cash-flow observations are complete and unbiased.",
+    "No fairness evaluation across supplier size, geography, or sector.",
+    "Does not model correlated shocks - a sector-wide downturn would break the independence assumption.",
+    "Not monitored for drift; there is no production feedback loop."
+  ]
+}

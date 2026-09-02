@@ -36,6 +36,6 @@ export function canOperate(context: AuthContext): boolean {
 /**
  * Check if user can view (all roles)
  */
-export function canView(context: AuthContext): boolean {
+export function canView(_context: AuthContext): boolean {
   return true;
 }

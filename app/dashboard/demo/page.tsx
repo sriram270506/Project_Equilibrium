@@ -1,138 +1,339 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  PageHeader,
+  Button,
+  Callout,
+  MonoId,
+} from "@/src/components/ui/primitives";
+import { cn } from "@/src/lib/utils";
 
-export default function DemoPage() {
-  const [resetting, setResetting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+interface StepResult {
+  step: string;
+  title: string;
+  narration: string;
+  whyItMatters: string;
+  facts: Array<{ label: string; value: string; tone?: "ok" | "warn" | "danger" }>;
+  verifyAt?: { href: string; label: string };
+  context?: Record<string, string>;
+}
 
-  const handleReset = async () => {
-    const confirmed = window.confirm(
-      "This will reset all demo data. Continue?"
-    );
-    if (!confirmed) return;
+const STEPS: Array<{
+  id: string;
+  title: string;
+  summary: string;
+  act: string;
+}> = [
+  {
+    id: "reset",
+    title: "Start from a clean slate",
+    summary: "Six suppliers with 30 days of cash-flow history.",
+    act: "Setup",
+  },
+  {
+    id: "score",
+    title: "Find who is about to run short",
+    summary: "Score every supplier; policy bounds every offer.",
+    act: "Decide",
+  },
+  {
+    id: "approve",
+    title: "Approve the offer and move money",
+    summary: "One transaction: intent, ledger, audit, outbox.",
+    act: "Decide",
+  },
+  {
+    id: "timeout",
+    title: "Break it: the provider times out",
+    summary: "The call dies after the money may have left.",
+    act: "Survive failure",
+  },
+  {
+    id: "duplicate_webhook",
+    title: "Break it again: the webhook arrives twice",
+    summary: "A replayed delivery must change nothing.",
+    act: "Survive failure",
+  },
+  {
+    id: "reconcile",
+    title: "Resolve the unknown",
+    summary: "Settle the truth against the provider.",
+    act: "Survive failure",
+  },
+  {
+    id: "prove",
+    title: "Prove nothing was lost",
+    summary: "The books foot after two injected failures.",
+    act: "Prove",
+  },
+];
 
-    setResetting(true);
-    setMessage(null);
+export default function GuidedDemoPage() {
+  const [results, setResults] = useState<Record<string, StepResult>>({});
+  const [running, setRunning] = useState<string | null>(null);
+  const [error, setError] = useState<{ step: string; message: string } | null>(
+    null
+  );
+  const [context, setContext] = useState<Record<string, string>>({});
+  const [autoRunning, setAutoRunning] = useState(false);
+
+  const currentIndex = STEPS.findIndex((s) => !results[s.id]);
+  const nextStep = currentIndex >= 0 ? STEPS[currentIndex] : null;
+  const allDone = currentIndex === -1;
+
+  async function runStep(stepId: string, carried = context) {
+    setRunning(stepId);
     setError(null);
-
     try {
-      const res = await fetch("/api/demo/reset", {
+      const res = await fetch("/api/demo/scenario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirm: true }),
+        body: JSON.stringify({ step: stepId, context: carried }),
       });
+      const json = await res.json();
 
-      const data = await res.json();
-      if (data.success) {
-        setMessage(
-          `Demo reset complete. Created ${data.data.suppliersCreated} suppliers.`
-        );
-      } else {
-        setError(data.error?.message || "Failed to reset demo");
+      if (!json.success) {
+        setError({
+          step: stepId,
+          message: json.error?.message ?? "Step failed",
+        });
+        return null;
       }
-    } catch (err) {
-      setError("Network error");
+
+      const result: StepResult = json.data;
+      setResults((prev) => ({ ...prev, [stepId]: result }));
+      const merged = { ...carried, ...(result.context ?? {}) };
+      setContext(merged);
+      return merged;
+    } catch {
+      setError({ step: stepId, message: "Could not reach the API." });
+      return null;
     } finally {
-      setResetting(false);
+      setRunning(null);
     }
-  };
+  }
+
+  async function runAll() {
+    setAutoRunning(true);
+    setResults({});
+    setError(null);
+    let carried: Record<string, string> = {};
+    for (const step of STEPS) {
+      const merged = await runStep(step.id, carried);
+      if (!merged) break;
+      carried = merged;
+      // A beat between steps so a viewer can read each one.
+      await new Promise((r) => setTimeout(r, 700));
+    }
+    setAutoRunning(false);
+  }
+
+  function reset() {
+    setResults({});
+    setContext({});
+    setError(null);
+  }
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="text-3xl font-bold mb-8">Demo Controls</h1>
+    <div className="max-w-5xl">
+      <PageHeader
+        title="Guided walkthrough"
+        lede="Seven steps against the real services — no mocked responses, no staged data. Two of them deliberately break the payment provider to show what the system does when things go wrong."
+        action={
+          <div className="flex gap-2">
+            {Object.keys(results).length > 0 ? (
+              <Button variant="ghost" size="sm" onClick={reset} disabled={autoRunning}>
+                Clear
+              </Button>
+            ) : null}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={runAll}
+              disabled={autoRunning || running !== null}
+            >
+              {autoRunning ? "Running…" : "Run all seven steps"}
+            </Button>
+          </div>
+        }
+      />
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
-        <h2 className="font-semibold text-blue-900 mb-2">About Demo Mode</h2>
-        <p className="text-sm text-blue-800">
-          Equilibrium runs in demo mode with synthetic data and MockRazorpay provider.
-          Use the controls below to reset the demo state or run failure scenarios.
-        </p>
-      </div>
+      <Callout tone="brand" title="What you are about to watch">
+        A supplier is projected to run out of cash. The model explains why, policy
+        prices the offer, an operator approves it, and money moves. Then the
+        provider times out mid-payment and later sends a duplicate webhook.
+        Nothing is double-paid, nothing is lost, and the books still foot at the
+        end.
+      </Callout>
 
-      {message && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6 text-emerald-800">
-          ✓ {message}
+      <ol className="mt-6 space-y-3">
+        {STEPS.map((step, i) => {
+          const result = results[step.id];
+          const isRunning = running === step.id;
+          const isNext = nextStep?.id === step.id;
+          const failed = error?.step === step.id;
+          const showActHeading =
+            i === 0 || STEPS[i - 1].act !== step.act;
+
+          return (
+            <li key={step.id}>
+              {showActHeading ? (
+                <p className="eyebrow mb-2 mt-5 first:mt-0">{step.act}</p>
+              ) : null}
+
+              <Card
+                className={cn(
+                  "transition-colors",
+                  isNext && !result && "ring-1 ring-brand/40",
+                  failed && "border-danger/40"
+                )}
+              >
+                <CardBody className="space-y-0">
+                  <div className="flex items-start gap-4">
+                    {/* Step marker */}
+                    <span
+                      className={cn(
+                        "tabular mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold",
+                        result && "bg-ok text-white",
+                        !result && isRunning && "bg-brand text-white pulse-ring",
+                        !result && !isRunning && isNext && "bg-brand-wash text-brand-strong",
+                        !result && !isRunning && !isNext && "bg-surface-sunken text-ink-muted"
+                      )}
+                    >
+                      {result ? "✓" : i + 1}
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-[15px] font-semibold text-ink-strong">
+                            {step.title}
+                          </h3>
+                          <p className="mt-0.5 text-[13px] text-ink-muted">
+                            {step.summary}
+                          </p>
+                        </div>
+
+                        {!result ? (
+                          <Button
+                            size="sm"
+                            variant={isNext ? "primary" : "secondary"}
+                            onClick={() => runStep(step.id)}
+                            disabled={running !== null || autoRunning}
+                          >
+                            {isRunning ? "Running…" : "Run step"}
+                          </Button>
+                        ) : null}
+                      </div>
+
+                      {/* Result */}
+                      {result ? (
+                        <div className="fade-up mt-4 space-y-4">
+                          <p className="text-[15px] leading-relaxed text-ink-body">
+                            {result.narration}
+                          </p>
+
+                          <div className="grid gap-x-6 gap-y-2 rounded-md border border-line-soft bg-surface-sunken px-4 py-3 sm:grid-cols-2">
+                            {result.facts.map((fact) => (
+                              <div
+                                key={fact.label}
+                                className="flex items-baseline justify-between gap-3 text-[13px]"
+                              >
+                                <span className="text-ink-muted">
+                                  {fact.label}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "tabular text-right font-medium",
+                                    fact.tone === "ok" && "text-ok",
+                                    fact.tone === "warn" && "text-warn",
+                                    fact.tone === "danger" && "text-danger",
+                                    !fact.tone && "text-ink-strong"
+                                  )}
+                                >
+                                  {fact.value.startsWith("corr_") ||
+                                  fact.value.startsWith("pay_") ? (
+                                    <MonoId value={fact.value} truncate={18} />
+                                  ) : (
+                                    fact.value
+                                  )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="rounded-md border-l-2 border-brand bg-brand-wash px-4 py-3">
+                            <p className="text-2xs font-semibold uppercase tracking-wider text-brand-strong">
+                              Why this is hard
+                            </p>
+                            <p className="mt-1 text-[14px] leading-relaxed text-ink-body">
+                              {result.whyItMatters}
+                            </p>
+                          </div>
+
+                          {result.verifyAt ? (
+                            <Link
+                              href={result.verifyAt.href}
+                              className="focusable inline-flex items-center gap-1.5 text-[13px] font-medium text-brand-strong hover:underline"
+                            >
+                              {result.verifyAt.label} →
+                            </Link>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {failed ? (
+                        <div className="mt-3 rounded-md border border-danger/30 bg-danger-wash px-4 py-3 text-[13px] text-ink-body">
+                          <p className="font-semibold text-danger">
+                            This step could not run
+                          </p>
+                          <p className="mt-1">{error.message}</p>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            </li>
+          );
+        })}
+      </ol>
+
+      {allDone ? (
+        <div className="fade-up mt-6">
+          <Card className="border-ok/30 bg-ok-wash">
+            <CardHeader
+              title="That is the whole system"
+              hint="Two suppliers were paid early, the provider failed twice, and the ledger still balances to the paisa."
+            />
+            <CardBody className="flex flex-wrap gap-3">
+              <Link
+                href="/dashboard/ledger"
+                className="focusable rounded-md bg-brand px-4 py-2 text-[13px] font-semibold text-white hover:bg-brand-strong"
+              >
+                Verify the trial balance
+              </Link>
+              <Link
+                href="/dashboard/reconciliation"
+                className="focusable rounded-md border border-line-strong bg-surface-card px-4 py-2 text-[13px] font-medium text-ink-strong hover:bg-surface-sunken"
+              >
+                Inspect exceptions
+              </Link>
+              <Link
+                href="/dashboard/payments"
+                className="focusable rounded-md border border-line-strong bg-surface-card px-4 py-2 text-[13px] font-medium text-ink-strong hover:bg-surface-sunken"
+              >
+                Trace a payment
+              </Link>
+            </CardBody>
+          </Card>
         </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-red-800">
-          ✗ {error}
-        </div>
-      )}
-
-      <div className="space-y-6">
-        <section className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Database Management</h2>
-          <button
-            onClick={handleReset}
-            disabled={resetting}
-            className="w-full px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-          >
-            {resetting ? "Resetting..." : "Reset All Demo Data"}
-          </button>
-          <p className="text-sm text-slate-600 mt-3">
-            Clears all data and re-seeds with fresh demo scenarios.
-          </p>
-        </section>
-
-        <section className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Hero Demo Workflow</h2>
-          <div className="space-y-3">
-            <p className="text-sm text-slate-700">
-              1. Navigate to <strong>Liquidity Opportunities</strong>
-            </p>
-            <p className="text-sm text-slate-700">
-              2. Find "Aarav Industrial Components" with status RECOMMENDED
-            </p>
-            <p className="text-sm text-slate-700">
-              3. Click "View Details" and review the ML model prediction
-            </p>
-            <p className="text-sm text-slate-700">
-              4. Click "Approve Opportunity" to create a payment intent
-            </p>
-            <p className="text-sm text-slate-700">
-              5. Go to <strong>Payment Operations</strong> to see the payment status
-            </p>
-            <p className="text-sm text-slate-700">
-              6. Go to <strong>Reconciliation</strong> and run reconciliation
-            </p>
-            <p className="text-sm text-slate-700">
-              7. Observe the matched payment and balanced ledger
-            </p>
-          </div>
-        </section>
-
-        <section className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Failure Scenarios</h2>
-          <div className="space-y-3 text-sm text-slate-700">
-            <p>
-              <strong>Timeout After Remote Success:</strong> Provider confirms payment,
-              but client times out. Payment appears as UNKNOWN internally.
-            </p>
-            <p>
-              <strong>Duplicate Webhook:</strong> Same webhook sent twice. System
-              handles idempotently without creating duplicate ledger entries.
-            </p>
-            <p>
-              <strong>Amount Mismatch:</strong> Provider and internal records differ.
-              Reconciliation detects and creates a case for manual review.
-            </p>
-          </div>
-        </section>
-
-        <section className="bg-slate-50 border border-slate-200 rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">System Information</h2>
-          <div className="space-y-2 text-sm font-mono">
-            <p>Mode: <span className="font-semibold">DEMO</span></p>
-            <p>Provider: <span className="font-semibold">MockRazorpay</span></p>
-            <p>Database: <span className="font-semibold">SQLite (dev.db)</span></p>
-            <p>Auth: <span className="font-semibold">demo-finance-operator</span></p>
-          </div>
-        </section>
-      </div>
+      ) : null}
     </div>
   );
 }

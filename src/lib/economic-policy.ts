@@ -1,4 +1,5 @@
 import { percentageOfPaise } from "./money";
+import { APPROVAL_THRESHOLD } from "./ml/model-artifact";
 
 // Pure policy evaluation constants
 export const DEFAULT_MAX_DISCOUNT_PERCENTAGE = 15; // 15% max discount
@@ -10,6 +11,17 @@ export interface PolicyConstraints {
   minExpectedValuePaise: number;
   dailyExposureLimitPaise: number;
   perTransactionCapPaise: number;
+  /**
+   * Minimum model probability before policy will consider an offer.
+   *
+   * This deliberately defaults to the threshold the model was FITTED with
+   * (see scripts/train-model.ts), not to a hand-picked 0.5. Policy and model
+   * disagreeing about what counts as "at risk" is a silent way to make a
+   * carefully calibrated model useless - an earlier version gated at 0.5 while
+   * the model was tuned to act at 0.16, which rejected most genuinely
+   * distressed suppliers before a human ever saw them.
+   */
+  minModelProbability: number;
 }
 
 export const DEFAULT_POLICY_CONSTRAINTS: PolicyConstraints = {
@@ -18,6 +30,7 @@ export const DEFAULT_POLICY_CONSTRAINTS: PolicyConstraints = {
   minExpectedValuePaise: 0, // ₹0 (can be negative if policy chooses)
   dailyExposureLimitPaise: 20000000, // ₹2,00,000
   perTransactionCapPaise: 500000, // ₹5,000
+  minModelProbability: APPROVAL_THRESHOLD,
 };
 
 export interface PolicyEvaluation {
@@ -102,8 +115,10 @@ export function evaluatePolicy(params: {
     );
   }
 
-  if (probability < 0.5) {
-    violations.push(`Model probability ${probability.toFixed(2)} below 50%`);
+  if (probability < constraints.minModelProbability) {
+    violations.push(
+      `Model probability ${(probability * 100).toFixed(0)}% below the ${(constraints.minModelProbability * 100).toFixed(0)}% action threshold`
+    );
   }
 
   // Determine approval

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { calculateTrialBalance, assertLedgerBalanced, getAllAccountBalances } from "@/src/lib/ledger/trial-balance";
 import { successEnvelope, errorEnvelope } from "@/src/lib/api-envelope";
 
@@ -6,7 +6,7 @@ import { successEnvelope, errorEnvelope } from "@/src/lib/api-envelope";
  * GET /api/ledger/trial-balance
  * Returns trial balance and validates ledger invariant
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Calculate trial balance
     const trialBalance = await calculateTrialBalance();
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
  * GET /api/ledger/accounts
  * Returns all account balances
  */
-export async function getAccountBalances(request: NextRequest) {
+export async function getAccountBalances() {
   try {
     const accounts = await getAllAccountBalances();
 

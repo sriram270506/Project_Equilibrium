@@ -2,35 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Equilibrium design tokens.
+ *
+ * This is a financial operations console: dense, high-contrast, and legible on a
+ * projector. We deliberately pin color-scheme to light so the app renders
+ * identically on every reviewer's machine — a previous dark-mode block flipped
+ * body text to near-white while every card stayed white, which made the whole
+ * UI look washed out on dark-mode laptops.
+ */
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --surface-page: 248 250 252;
+  --surface-card: 255 255 255;
+  --surface-sunken: 241 245 249;
+  --surface-inverse: 9 14 38;
+
+  /* Ink */
+  --ink-strong: 12 18 38;
+  --ink-body: 39 51 76;
+  --ink-muted: 92 106 133;
+  --ink-inverse: 248 250 252;
+
+  /* Lines */
+  --line-soft: 226 232 240;
+  --line-strong: 203 213 225;
+
+  /* Brand — deep navy + a single confident blue accent */
+  --brand-ink: 9 14 38;
+  --brand: 37 99 235;
+  --brand-strong: 29 78 216;
+  --brand-wash: 239 246 255;
+
+  /* Semantic status */
+  --ok: 4 120 87;
+  --ok-wash: 236 253 245;
+  --warn: 180 83 9;
+  --warn-wash: 255 251 235;
+  --danger: 190 18 60;
+  --danger-wash: 255 241 242;
+  --info: 67 56 202;
+  --info-wash: 238 242 255;
+}
+
 html {
-  --foreground-rgb: 15, 23, 42;
-  --background-start-rgb: 255, 255, 255;
-  --background-end-rgb: 249, 250, 251;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgb(var(--background-end-rgb))
-  );
+  background-color: rgb(var(--surface-page));
+  color: rgb(var(--ink-body));
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    --foreground-rgb: 226, 232, 240;
-    --background-start-rgb: 15, 23, 42;
-    --background-end-rgb: 15, 23, 42;
+/* Money and any figure that must align in a column. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Monospace identifiers: correlation ids, payment ids, hashes. */
+.mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  letter-spacing: -0.01em;
+}
+
+/* Section eyebrow label. */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--ink-muted));
+}
+
+/* Focus ring used across every interactive element. */
+.focusable:focus-visible {
+  outline: 2px solid rgb(var(--brand));
+  outline-offset: 2px;
+}
+
+@keyframes eq-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgb(var(--brand) / 0.45); }
+  70% { box-shadow: 0 0 0 10px rgb(var(--brand) / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(var(--brand) / 0); }
+}
+
+.pulse-ring {
+  animation: eq-pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes eq-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up {
+  animation: eq-fade-up 0.28s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-ring,
+  .fade-up {
+    animation: none;
   }
 }
-
-/* Improve contrast for labels and secondary text */
-.label-secondary {
-  @apply text-slate-700;
-}
-
-.detail-text {
-  @apply text-slate-800;
-}
-

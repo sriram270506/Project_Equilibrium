@@ -3,11 +3,11 @@ import { evaluateModel } from "@/src/lib/ml/model-artifact";
 import { evaluatePolicy } from "@/src/lib/economic-policy";
 import { generateId, generatePaymentId, generateIdempotencyKey } from "@/src/lib/ids";
 import { createAuditEvent } from "@/src/lib/audit";
-import { createOutboxEvent } from "@/src/lib/events/event-service";
 import { generateRequestFingerprint } from "@/src/lib/idempotency";
-import { assertOpportunityTransition, assertPaymentTransition } from "@/src/lib/state-machine";
+import { assertOpportunityTransition } from "@/src/lib/state-machine";
 import { assertLedgerBalanced } from "@/src/lib/ledger/trial-balance";
 import { FeatureSnapshot } from "@/src/lib/ml/model-artifact";
+import { buildFeatures } from "@/src/lib/ml/features";
 
 /**
  * Evaluate opportunity for a supplier
@@ -36,18 +36,20 @@ export async function evaluateOpportunity(
     throw new Error(`No liquidity observations for supplier: ${supplierId}`);
   }
 
-  // Prepare features
-  const features: FeatureSnapshot = {
-    cashFlowVolatility: latestObservation.volatility,
-    daysRunwayTrend: -latestObservation.daysRunway, // Negative trend = lower runway
-    paymentTimingRegularity: latestObservation.paymentRegularity,
-    availableBalanceRatio:
-      latestObservation.availableBalancePaise /
-      (latestObservation.availableBalancePaise +
-        latestObservation.outflowPaise +
-        1),
-    supplierTenureDays: 1000, // Mock value
-  };
+  /*
+   * Build features through the shared constructor so that what we score with
+   * here is identical to what the model was trained on. Doing this inline was
+   * how an earlier version ended up negating a feature that already carried a
+   * negative coefficient, scoring every supplier at 99%.
+   */
+  const tenureDays = Math.max(
+    Math.floor(
+      (Date.now() - supplier.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+    ),
+    1
+  );
+
+  const features: FeatureSnapshot = buildFeatures(latestObservation, tenureDays);
 
   // Evaluate model
   const modelProbability = evaluateModel(features);

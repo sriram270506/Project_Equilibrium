@@ -5,6 +5,10 @@ import reactHooks from "eslint-plugin-react-hooks";
 import nextPlugin from "@next/eslint-plugin-next";
 
 export default [
+  {
+    // Build output and vendored code are not ours to lint.
+    ignores: [".next/**", "node_modules/**", "coverage/**", "prisma/prisma/**"],
+  },
   js.configs.recommended,
   ...ts.configs.recommended,
   {

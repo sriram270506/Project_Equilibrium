@@ -1,154 +1,332 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { formatPaise } from "@/src/lib/money";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  Stat,
+  PageHeader,
+  Money,
+  Button,
+  LoadingState,
+  ErrorState,
+  EmptyState,
+  Table,
+  Th,
+  Td,
+  MonoId,
+  Callout,
+} from "@/src/components/ui/primitives";
+import { StatusChip } from "@/src/components/ui/status";
+import { RiskBar } from "@/src/components/explainability";
 
 interface DashboardData {
-  kpis: {
-    recommendedOpportunities: number;
-    expectedValuePaise: number;
-    activePaymentIntents: number;
-    openReconciliationCases: number;
+  headline: {
+    suppliersAtRisk: number;
+    atRiskExposurePaise: number;
+    mostUrgent: {
+      opportunityId: string;
+      supplierName: string;
+      probability: number;
+      amountPaise: number;
+    } | null;
   };
+  kpis: {
+    suppliersAtRisk: number;
+    offersApproved: number;
+    cashAdvancedPaise: number;
+    suppliersHelped: number;
+    openExceptions: number;
+    criticalExceptions: number;
+    paymentsNeedingAttention: number;
+    pendingOutboxEvents: number;
+  };
+  integrity: {
+    ledgerBalanced: boolean;
+    totalDebitsPaise: number;
+    totalCreditsPaise: number;
+    netPaise: number;
+    accountCount: number;
+  };
+  paymentsByStatus: Record<string, number>;
+  recentPayments: Array<{
+    id: string;
+    supplierName: string;
+    amountPaise: number;
+    status: string;
+    correlationId: string;
+    createdAt: string;
+  }>;
+  systemHealth: { status: string; mode: string; provider: string };
 }
 
-interface HealthData {
-  status: string;
-  mode: string;
-  provider: string;
-  timestamp: string;
-}
-
-export default function DashboardPage() {
-  const [health, setHealth] = useState<HealthData | null>(null);
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+export default function OverviewPage() {
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch health data
-        const healthRes = await fetch("/api/health");
-        if (!healthRes.ok) throw new Error("Health check failed");
-        const healthData = await healthRes.json();
-        
-        // Fetch dashboard data
-        const dashboardRes = await fetch("/api/dashboard");
-        if (!dashboardRes.ok) throw new Error("Dashboard data failed");
-        const dashboardData = await dashboardRes.json();
-        
-        if (healthData.success && dashboardData.success) {
-          setHealth(healthData.data);
-          setDashboard(dashboardData.data);
-        } else {
-          setError("Failed to load dashboard data");
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch data");
-      } finally {
-        setLoading(false);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/dashboard", { cache: "no-store" });
+      const json = await res.json();
+      if (json.success) {
+        setData(json.data);
+      } else {
+        setError(json.error?.message ?? "Failed to load overview");
       }
-    };
-
-    fetchData();
+    } catch {
+      setError("Could not reach the API. Is the dev server running?");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  if (loading) {
-    return <div className="text-center py-8">Loading dashboard...</div>;
-  }
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800 inline-block">
-          {error}
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingState label="Loading today's position" />;
+  if (error) return <ErrorState message={error} onRetry={load} />;
+  if (!data) return null;
+
+  const { headline, kpis, integrity, recentPayments } = data;
 
   return (
-    <div className="max-w-7xl">
-      <h1 className="text-3xl font-bold mb-8">Overview</h1>
+    <div className="fade-up max-w-6xl">
+      <PageHeader
+        title="Overview"
+        lede="Which suppliers are about to run short, what we have advanced them, and whether the books still foot."
+        action={
+          <Button variant="secondary" size="sm" onClick={load}>
+            Refresh
+          </Button>
+        }
+      />
 
-      {/* System Status */}
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 className="text-lg font-semibold mb-4">System Status</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-slate-700 font-medium">Status</p>
-            <p className="text-lg font-semibold text-emerald-600">
-              {health?.status || "Unknown"}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-700 font-medium">Provider Mode</p>
-            <p className="text-lg font-semibold text-blue-600">
-              {health?.provider || "Unknown"}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-700 font-medium">Application Mode</p>
-            <p className="text-lg font-semibold text-purple-600">
-              {health?.mode || "Unknown"}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-700 font-medium">Timestamp</p>
-            <p className="text-sm text-slate-800">
-              {health?.timestamp ? new Date(health.timestamp).toLocaleString("en-IN") : "Unknown"}
-            </p>
-          </div>
-        </div>
+      {/* The one sentence that matters right now. */}
+      {headline.suppliersAtRisk > 0 && headline.mostUrgent ? (
+        <Callout tone="warn" title="Needs a decision today">
+          <p>
+            <strong>{headline.suppliersAtRisk}</strong>{" "}
+            {headline.suppliersAtRisk === 1 ? "supplier is" : "suppliers are"}{" "}
+            projected to run short of cash within seven days, representing{" "}
+            <Money paise={headline.atRiskExposurePaise} /> in early-payment
+            offers awaiting approval. The most urgent is{" "}
+            <strong>{headline.mostUrgent.supplierName}</strong> at{" "}
+            {(headline.mostUrgent.probability * 100).toFixed(0)}% risk.
+          </p>
+          <Link
+            href="/dashboard/opportunities"
+            className="focusable mt-3 inline-flex rounded-md bg-brand px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-brand-strong"
+          >
+            Review suppliers at risk
+          </Link>
+        </Callout>
+      ) : (
+        <Callout tone="ok" title="No suppliers currently at risk">
+          Every supplier has adequate projected runway. New observations are
+          scored as they arrive.
+        </Callout>
+      )}
+
+      {/* Outcomes, not entity counts. */}
+      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Stat
+          label="Suppliers at risk"
+          value={kpis.suppliersAtRisk}
+          tone={kpis.suppliersAtRisk > 0 ? "warn" : "ok"}
+          hint="Projected to run short within 7 days"
+          emphasis={kpis.suppliersAtRisk > 0}
+        />
+        <Stat
+          label="Cash advanced"
+          value={<Money paise={kpis.cashAdvancedPaise} />}
+          tone="ok"
+          hint={`Paid early to ${kpis.suppliersHelped} ${
+            kpis.suppliersHelped === 1 ? "supplier" : "suppliers"
+          }`}
+        />
+        <Stat
+          label="Payments needing attention"
+          value={kpis.paymentsNeedingAttention}
+          tone={kpis.paymentsNeedingAttention > 0 ? "warn" : "ok"}
+          hint="Unknown outcome or held for review"
+        />
+        <Stat
+          label="Open exceptions"
+          value={kpis.openExceptions}
+          tone={
+            kpis.criticalExceptions > 0
+              ? "danger"
+              : kpis.openExceptions > 0
+                ? "warn"
+                : "ok"
+          }
+          hint={
+            kpis.criticalExceptions > 0
+              ? `${kpis.criticalExceptions} critical`
+              : "Where we and the provider disagree"
+          }
+        />
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-slate-700 font-medium mb-2">Recommended Opportunities</p>
-          <p className="text-3xl font-bold text-slate-900">
-            {dashboard?.kpis.recommendedOpportunities ?? 0}
-          </p>
-          <p className="text-xs text-slate-700 mt-2">Ready for review</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-slate-700 font-medium mb-2">Expected Value</p>
-          <p className="text-3xl font-bold text-emerald-600">
-            {formatPaise(dashboard?.kpis.expectedValuePaise ?? 0)}
-          </p>
-          <p className="text-xs text-slate-700 mt-2">Aggregated</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-slate-700 font-medium mb-2">Active Payment Intents</p>
-          <p className="text-3xl font-bold text-blue-600">
-            {dashboard?.kpis.activePaymentIntents ?? 0}
-          </p>
-          <p className="text-xs text-slate-700 mt-2">Confirmed</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-slate-700 font-medium mb-2">Open Reconciliation</p>
-          <p className="text-3xl font-bold text-amber-600">
-            {dashboard?.kpis.openReconciliationCases ?? 0}
-          </p>
-          <p className="text-xs text-slate-700 mt-2">Cases</p>
-        </div>
+      {/* The integrity claim, stated plainly and checked live. */}
+      <div className="mt-4">
+        <Card
+          className={
+            integrity.ledgerBalanced
+              ? "border-ok/30 bg-ok-wash"
+              : "border-danger/40 bg-danger-wash"
+          }
+        >
+          <CardBody className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-lg ${
+                  integrity.ledgerBalanced
+                    ? "bg-ok text-white"
+                    : "bg-danger text-white"
+                }`}
+              >
+                {integrity.ledgerBalanced ? "✓" : "!"}
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-ink-strong">
+                  {integrity.ledgerBalanced
+                    ? "The books balance"
+                    : "Ledger is out of balance"}
+                </p>
+                <p className="tabular mt-0.5 text-[13px] text-ink-body">
+                  <Money paise={integrity.totalDebitsPaise} /> debits ={" "}
+                  <Money paise={integrity.totalCreditsPaise} /> credits across{" "}
+                  {integrity.accountCount} accounts
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/dashboard/ledger"
+              className="focusable rounded-md border border-line-strong bg-surface-card px-3 py-1.5 text-[13px] font-medium text-ink-strong hover:bg-surface-sunken"
+            >
+              Open trial balance
+            </Link>
+          </CardBody>
+        </Card>
       </div>
 
-      {/* Dashboard Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="font-semibold text-blue-900 mb-2">Getting Started</h3>
-        <p className="text-sm text-blue-800 mb-4">
-          Equilibrium is a marketplace finance operations control layer. Use the navigation
-          to explore liquidity opportunities, payment operations, and dispute evidence workflows.
-        </p>
-        <ul className="text-sm text-blue-800 space-y-2">
-          <li>• <strong>Liquidity Opportunities:</strong> Review ML-assisted early-payment opportunities</li>
-          <li>• <strong>Payment Operations:</strong> Monitor payment intents and reconciliation status</li>
-          <li>• <strong>Dispute Evidence:</strong> Generate and validate dispute drafts from evidence</li>
-          <li>• <strong>Demo Controls:</strong> Run failure scenarios and test resilience</li>
-        </ul>
+      {/* Recent money movement. */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader
+            title="Recent money movement"
+            hint="Every payment carries a correlation id that threads it through the ledger, the event log, and reconciliation."
+            action={
+              <Link
+                href="/dashboard/payments"
+                className="focusable text-[13px] font-medium text-brand-strong hover:underline"
+              >
+                View all
+              </Link>
+            }
+          />
+          {recentPayments.length === 0 ? (
+            <EmptyState title="No payments yet">
+              Approve an offer from{" "}
+              <Link
+                href="/dashboard/opportunities"
+                className="font-medium text-brand-strong hover:underline"
+              >
+                suppliers at risk
+              </Link>
+              , or run the{" "}
+              <Link
+                href="/dashboard/demo"
+                className="font-medium text-brand-strong hover:underline"
+              >
+                guided walkthrough
+              </Link>{" "}
+              to generate the full story end to end.
+            </EmptyState>
+          ) : (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Supplier</Th>
+                  <Th align="right">Amount</Th>
+                  <Th>State</Th>
+                  <Th>Correlation</Th>
+                  <Th align="right">Created</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentPayments.map((p) => (
+                  <tr key={p.id} className="hover:bg-surface-sunken">
+                    <Td>
+                      <Link
+                        href={`/dashboard/payments/${p.id}`}
+                        className="focusable font-medium text-ink-strong hover:text-brand-strong hover:underline"
+                      >
+                        {p.supplierName}
+                      </Link>
+                    </Td>
+                    <Td align="right" className="font-medium text-ink-strong">
+                      <Money paise={p.amountPaise} />
+                    </Td>
+                    <Td>
+                      <StatusChip status={p.status} size="sm" />
+                    </Td>
+                    <Td>
+                      <MonoId value={p.correlationId} truncate={14} />
+                    </Td>
+                    <Td align="right" className="tabular text-2xs text-ink-muted">
+                      {new Date(p.createdAt).toLocaleString("en-IN", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </Card>
       </div>
+
+      {/* Risk snapshot for the most urgent supplier. */}
+      {headline.mostUrgent ? (
+        <div className="mt-6">
+          <Card>
+            <CardHeader
+              eyebrow="Most urgent"
+              title={headline.mostUrgent.supplierName}
+              hint="Highest predicted probability of a cash shortfall in the next seven days."
+              action={
+                <Link
+                  href={`/dashboard/opportunities/${headline.mostUrgent.opportunityId}`}
+                  className="focusable rounded-md bg-brand px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-brand-strong"
+                >
+                  Review and decide
+                </Link>
+              }
+            />
+            <CardBody className="flex flex-wrap items-center gap-8">
+              <RiskBar
+                probability={headline.mostUrgent.probability}
+                label="shortfall risk"
+              />
+              <div>
+                <p className="text-2xs text-ink-muted">Offer size</p>
+                <p className="tabular text-lg font-semibold text-ink-strong">
+                  <Money paise={headline.mostUrgent.amountPaise} />
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+      ) : null}
     </div>
   );
 }

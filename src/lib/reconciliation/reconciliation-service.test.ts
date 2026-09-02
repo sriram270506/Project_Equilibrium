@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   detectReconciliationIssue,
-  ReconciliationOutcome,
 } from "./reconciliation-service";
 
 describe("Reconciliation Service", () => {
