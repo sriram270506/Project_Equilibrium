@@ -1,19 +1,20 @@
-import { successEnvelope, errorEnvelope } from "@/src/lib/api-envelope";
+import { successEnvelope } from "@/src/lib/api-envelope";
 import { assertDemoMode } from "@/src/lib/env";
 import { prisma } from "@/src/lib/prisma";
 import { LIQUIDITY_MODEL } from "@/src/lib/ml/model-artifact";
 import { NextRequest, NextResponse } from "next/server";
+import { withErrorHandler } from "@/src/lib/api/error-handler";
+import { withAuth, getCaller } from "@/src/lib/api/auth-middleware";
+import { ValidationError } from "@/src/lib/errors";
 
-export async function POST(request: NextRequest) {
-  try {
-    assertDemoMode();
+export const POST = withErrorHandler(
+  withAuth("ADMIN", async (request: NextRequest) => {
+    const caller = getCaller(request);
+    assertDemoMode(); // Demo-only endpoint
 
     const body = await request.json();
     if (!body.confirm) {
-      return NextResponse.json(
-        errorEnvelope("VALIDATION_ERROR", "Reset confirmation required"),
-        { status: 400 }
-      );
+      throw new ValidationError("Reset confirmation required");
     }
 
     // Clear all data
@@ -140,22 +141,8 @@ export async function POST(request: NextRequest) {
       successEnvelope({
         message: "Demo data reset successfully",
         suppliersCreated: suppliers.length,
+        resetBy: caller.userId,
       })
     );
-  } catch (error) {
-    const message = (error as Error).message;
-    console.error("Error resetting demo:", error);
-
-    if (message.includes("demo mode")) {
-      return NextResponse.json(
-        errorEnvelope("FORBIDDEN", message),
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json(
-      errorEnvelope("INTERNAL_ERROR", "Failed to reset demo"),
-      { status: 500 }
-    );
-  }
-}
+  })
+);

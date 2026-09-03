@@ -1,17 +1,24 @@
 import { generateDisputeDraft } from "@/src/lib/disputes/draft-service";
-import { successEnvelope, errorEnvelope } from "@/src/lib/api-envelope";
+import { successEnvelope } from "@/src/lib/api-envelope";
 import { NextRequest, NextResponse } from "next/server";
+import { withErrorHandler } from "@/src/lib/api/error-handler";
+import { withAuth, getCaller } from "@/src/lib/api/auth-middleware";
+import { NotFoundError } from "@/src/lib/errors";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
+export const POST = withErrorHandler(
+  withAuth("OPERATOR", async (
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+  ) => {
+    const caller = getCaller(request);
     const { id } = await params;
     const body = await request.json();
-    const createdBy = body.createdBy || "system";
 
-    const result = await generateDisputeDraft(id, createdBy);
+    const result = await generateDisputeDraft(id, caller.userId);
+
+    if (!result) {
+      throw new NotFoundError("Dispute case not found");
+    }
 
     const statusCode =
       result.validationStatus === "PASSED" ? 201 : 200;
@@ -31,20 +38,5 @@ export async function POST(
       }),
       { status: statusCode }
     );
-  } catch (error) {
-    const message = (error as Error).message;
-    console.error("Error generating dispute draft:", error);
-
-    if (message.includes("not found")) {
-      return NextResponse.json(
-        errorEnvelope("NOT_FOUND", message),
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(
-      errorEnvelope("INTERNAL_ERROR", "Failed to generate dispute draft"),
-      { status: 500 }
-    );
-  }
-}
+  })
+);

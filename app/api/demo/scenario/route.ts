@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { successEnvelope, errorEnvelope } from "@/src/lib/api-envelope";
+import { successEnvelope } from "@/src/lib/api-envelope";
 import { assertDemoMode } from "@/src/lib/env";
 import {
   runScenarioStep,
   SCENARIO_STEPS,
   ScenarioStepId,
 } from "@/src/lib/demo/scenario";
+import { withErrorHandler } from "@/src/lib/api/error-handler";
+import { withAuth, getCaller } from "@/src/lib/api/auth-middleware";
+import { ValidationError } from "@/src/lib/errors";
 
 const requestSchema = z.object({
   step: z.enum([
@@ -27,37 +30,29 @@ export async function GET() {
 }
 
 /** Run one step of the guided walkthrough against the real services. */
-export async function POST(request: NextRequest) {
-  try {
-    assertDemoMode();
+export const POST = withErrorHandler(
+  withAuth("OPERATOR", async (request: NextRequest) => {
+    const caller = getCaller(request);
+    assertDemoMode(); // Demo-only endpoint
 
     const body = await request.json();
     const parsed = requestSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        errorEnvelope(
-          "VALIDATION_ERROR",
-          "Invalid scenario step",
-          { issues: parsed.error.issues }
-        ),
-        { status: 400 }
-      );
+      throw new ValidationError("Invalid scenario step", {
+        issues: parsed.error.issues,
+      });
     }
 
     const result = await runScenarioStep(
       parsed.data.step as ScenarioStepId,
-      parsed.data.context ?? {}
+      parsed.data.context ?? {},
+      caller.userId
     );
 
     return NextResponse.json(successEnvelope(result));
-  } catch (error) {
-    const message = (error as Error).message;
-    console.error("Scenario step failed:", error);
-
-    if (message.includes("demo mode")) {
-      return NextResponse.json(errorEnvelope("FORBIDDEN", message), {
-        status: 403,
+  })
+);
       });
     }
 
