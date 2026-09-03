@@ -53,9 +53,15 @@ mapping. The journal is single-entity, single-currency, cash-basis.
 `db push`), a durable queue, a background worker (the outbox drains via an
 endpoint), horizontal scaling, load testing, capacity planning.
 
-**Security.** Session authentication (API keys only), tenant isolation, rate
-limiting, CSRF, secret-management integration, key rotation, encryption at
-rest, a formal threat model, dependency/supply-chain review.
+**Security.** Session authentication (API keys only), rate limiting, CSRF,
+secret-management integration, key rotation, encryption at rest, a formal
+threat model, dependency/supply-chain review.
+
+Tenant isolation *is* implemented and tested — see the Real table above — but
+note its boundary: it is enforced in the application's query layer, not by
+database row-level security. A raw query that forgets `tenantId` would still
+cross tenants, which is why the scoped-query helpers exist and why the
+isolation check runs on every `demo:verify`.
 
 **Operations.** Runbook beyond [RUNBOOK.md](RUNBOOK.md), disaster recovery
 testing, backup/restore procedures, alerting and on-call, SLOs, distributed
