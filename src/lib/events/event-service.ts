@@ -20,7 +20,13 @@ export async function appendEvent(
   aggregateId: string,
   eventType: string,
   payload: Record<string, unknown>,
-  correlationId: string
+  correlationId: string,
+  /**
+   * Override the idempotency key. Provider webhooks pass the provider's own
+   * event id so a redelivery collides on the unique index instead of appending
+   * a second copy.
+   */
+  idempotencyKeyOverride?: string
 ): Promise<string> {
   // Get next sequence number for this aggregate
   const lastEvent = await prisma.eventRecord.findFirst({
@@ -46,7 +52,8 @@ export async function appendEvent(
       schemaVersion: "1.0",
       payloadJson: JSON.stringify(payload),
       source: "INTERNAL",
-      idempotencyKey: `${aggregateId}_${sequenceNumber}`,
+      idempotencyKey:
+        idempotencyKeyOverride ?? `${aggregateId}_${sequenceNumber}`,
       correlationId,
     },
   });

@@ -174,7 +174,24 @@ async function main() {
   const txnDebits = ledgerTxn?.entries.reduce((s, e) => s + e.debitPaise, 0) ?? 0;
   const txnCredits = ledgerTxn?.entries.reduce((s, e) => s + e.creditPaise, 0) ?? 0;
 
-  check("Ledger entries were written with the payment", (ledgerTxn?.entries.length ?? 0) === 2);
+  const accountsTouched = new Set(
+    ledgerTxn?.entries.map((e) => e.accountCode) ?? []
+  );
+
+  check(
+    "A full journal was posted with the payment",
+    accountsTouched.size >= 4,
+    `${ledgerTxn?.entries.length ?? 0} legs across ${accountsTouched.size} accounts`
+  );
+  check(
+    "The discount is recorded as income, not just as a cash movement",
+    accountsTouched.has("DISCOUNT_INCOME")
+  );
+  check(
+    "Provider fees and cost of capital are posted as expenses",
+    accountsTouched.has("PROVIDER_FEE_EXPENSE") &&
+      accountsTouched.has("FUNDING_COST_EXPENSE")
+  );
   check(
     "Those entries balance",
     txnDebits === txnCredits,

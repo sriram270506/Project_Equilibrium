@@ -15,6 +15,8 @@ import {
 } from "@/src/lib/risk/controls";
 import { FeatureSnapshot } from "@/src/lib/ml/model-artifact";
 import { buildFeatures } from "@/src/lib/ml/features";
+import { buildEarlyPaymentJournal } from "@/src/lib/ledger/accounts";
+import { percentageOfPaise } from "@/src/lib/money";
 
 /**
  * Evaluate opportunity for a supplier
@@ -245,6 +247,19 @@ export async function approveOpportunity(
 
   const requestFingerprint = generateRequestFingerprint(requestPayload);
 
+  /*
+   * The invoice this advance is priced against. `expectedBenefitPaise` is what
+   * the supplier receives today; the face value is what the platform recovers
+   * on the due date, and the difference is the discount income.
+   */
+  const DAYS_EARLY = 27;
+  const faceValuePaise =
+    opportunity.expectedBenefitPaise +
+    percentageOfPaise(
+      opportunity.expectedBenefitPaise,
+      opportunity.recommendedDiscountBps
+    );
+
   // Atomic transaction: all writes succeed or all fail. If it throws, the
   // claim is released so the offer returns to the queue rather than vanishing.
   let result;
@@ -273,30 +288,36 @@ export async function approveOpportunity(
       },
     });
 
-    // 2. Create ledger transaction with entries
+    /*
+     * 2. Post the journal.
+     *
+     * Built and validated by buildEarlyPaymentJournal, which throws rather than
+     * returning anything unbalanced - so an unbalanced transaction cannot reach
+     * the database at all. The previous version posted a two-leg entry that
+     * balanced but recorded no income, no provider fee, no funding cost, and
+     * debited cash for money going out.
+     */
+    const journal = buildEarlyPaymentJournal({
+      faceValuePaise: faceValuePaise,
+      advancePaise: opportunity.expectedBenefitPaise,
+      daysEarly: DAYS_EARLY,
+    });
+
     await tx.ledgerTransaction.create({
       data: {
         id: generateId(),
         referenceType: "PAYMENT_INTENT",
         referenceId: paymentIntentId,
         currency: "INR",
-        description: `Discount payout opportunity ${opportunityId}`,
+        description: `Early payment to supplier, offer ${opportunityId}`,
         paymentIntentId,
         entries: {
-          create: [
-            {
-              id: generateId(),
-              accountCode: "PLATFORM_CASH",
-              debitPaise: opportunity.expectedBenefitPaise,
-              creditPaise: 0,
-            },
-            {
-              id: generateId(),
-              accountCode: "SUPPLIER_PAYABLE",
-              debitPaise: 0,
-              creditPaise: opportunity.expectedBenefitPaise,
-            },
-          ],
+          create: journal.map((leg) => ({
+            id: generateId(),
+            accountCode: leg.accountCode,
+            debitPaise: leg.debitPaise,
+            creditPaise: leg.creditPaise,
+          })),
         },
       },
     });

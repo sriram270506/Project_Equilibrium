@@ -67,7 +67,7 @@ npm run demo:verify
 
 This drives the real services end to end — scores every supplier, approves and
 pays, clears a maker-checker gate, injects a provider timeout, replays a
-webhook, reconciles, and checks the books — asserting **28 invariants** and
+webhook, reconciles, and checks the books — asserting **34 invariants** and
 exiting non-zero if any fails.
 
 ```
@@ -81,7 +81,7 @@ exiting non-zero if any fails.
   PASS  Every audit entry hashes correctly and links to its predecessor
   PASS  The kill switch refuses new payments while engaged
 
-  28 passed, 0 failed
+  34 passed, 0 failed
 ```
 
 ### Retrain the model
@@ -169,11 +169,20 @@ every route boundary, Tailwind, Recharts, Vitest.
 implements it with injectable failure modes, so a live Razorpay adapter can
 replace it without touching business logic.
 
-Design decisions and trade-offs are in [ARCHITECTURE.md](ARCHITECTURE.md); what
-this prototype deliberately does *not* do is in
-[SECURITY_SCOPE.md](SECURITY_SCOPE.md).
+Design decisions and trade-offs are in [ARCHITECTURE.md](ARCHITECTURE.md).
+What is real versus simulated is in [docs/SCOPE.md](docs/SCOPE.md).
+Operational procedures are in [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ---
+
+## What is real, simulated, and not built
+
+[docs/SCOPE.md](docs/SCOPE.md) is a three-table breakdown of exactly which
+capabilities are implemented and verified, which run against a simulator, and
+which are deliberately absent. Read it before judging any claim on this page.
+
+The short version: **the correctness machinery is real and testable; the data,
+the counterparty, and the business case are not.**
 
 ## Honest limitations
 
@@ -206,7 +215,8 @@ claim you have to take on trust — `npm run demo:verify` checks all of it.
 | `npm test` | Unit tests |
 | `npm run typecheck` | TypeScript, strict |
 | `npm run lint` | ESLint |
-| `npm run db:seed` | Reseed six suppliers with 30 days of history each |
+| `npm run db:seed` | Reseed 12 suppliers with 30 days of history each |
+| `npm run razorpay:check` | Prove (or disprove) the live Razorpay integration |
 
 ---
 

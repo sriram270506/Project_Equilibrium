@@ -79,7 +79,7 @@ model PaymentIntent {
   id                      String   @id
   internalReference       String   @unique
   provider                String   @default("RAZORPAY")
-  providerPaymentId       String?
+  providerPaymentId       String?  @unique
   providerOrderId         String?
   operationType           String   // DISCOUNT_PAYOUT, ESCROW_HOLD, ESCROW_RELEASE, REFUND
   amountPaise             Int
@@ -110,6 +110,7 @@ model PaymentIntent {
   @@index([status])
   @@index([supplierId])
   @@index([correlationId])
+  @@index([status, createdAt])
 }
 
 model LedgerTransaction {
