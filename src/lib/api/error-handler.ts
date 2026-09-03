@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ApplicationError } from "../errors";
+import { ApplicationError, RateLimitError } from "../errors";
 import { errorEnvelope } from "../api-envelope";
 
 /**
@@ -9,10 +9,20 @@ import { errorEnvelope } from "../api-envelope";
 export function handleApiError(error: unknown): NextResponse {
   // Known application error
   if (error instanceof ApplicationError) {
-    return NextResponse.json(
+    const response = NextResponse.json(
       errorEnvelope(error.code, error.message, error.details),
       { status: error.statusCode }
     );
+
+    // Add Retry-After header for rate limit errors
+    if (error instanceof RateLimitError && error.details?.retryAfter) {
+      response.headers.set(
+        "Retry-After",
+        String(error.details.retryAfter)
+      );
+    }
+
+    return response;
   }
 
   // Zod validation error

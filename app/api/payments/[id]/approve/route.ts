@@ -1,69 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import { confirmSecondApproval } from "@/src/server/opportunity-service";
 import { submitPaymentToProvider } from "@/src/lib/payments/payment-service";
-import { successEnvelope, errorEnvelope } from "@/src/lib/api-envelope";
-import { withAuth } from "@/src/lib/auth/guard";
-import { RiskControlError } from "@/src/lib/risk/controls";
+import { successEnvelope } from "@/src/lib/api-envelope";
+import { withAuth, getAuthContext } from "@/src/lib/api/auth-middleware";
+import { withErrorHandler } from "@/src/lib/api/error-handler";
+import { withRateLimit, getUserIdentifier } from "@/src/lib/api/rate-limit-middleware";
 
 /**
  * POST /api/payments/:id/approve
  *
  * The checker half of maker-checker. Requires the APPROVER role, and the
  * service refuses if the caller is the same person who raised the payment.
+ *
+ * Rate limited to 100 approvals per hour per user.
  */
-export const POST = withAuth<{ params: Promise<{ id: string }> }>(
-  "APPROVER",
-  async (_request: NextRequest, { params }, auth) => {
-    try {
-      const { id } = await params;
+const approvePaymentHandler = async (
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) => {
+  const authContext = getAuthContext(request);
+  const { id } = await params;
 
-      await confirmSecondApproval(id, auth.userId);
-      const paymentStatus = await submitPaymentToProvider(id);
+  await confirmSecondApproval(id, authContext.userId);
+  const paymentStatus = await submitPaymentToProvider(id);
 
-      return NextResponse.json(
-        successEnvelope({
-          paymentIntentId: id,
-          status: paymentStatus,
-          checkedBy: auth.name,
-          message: "Second approval granted and payment submitted.",
-        })
-      );
-    } catch (error) {
-      if (error instanceof RiskControlError) {
-        return NextResponse.json(
-          errorEnvelope("RISK_CONTROL_BLOCKED", error.message, {
-            violations: error.violations,
-          }),
-          { status: 409 }
-        );
-      }
+  return NextResponse.json(
+    successEnvelope({
+      paymentIntentId: id,
+      status: paymentStatus,
+      checkedBy: authContext.userId,
+      message: "Second approval granted and payment submitted.",
+    })
+  );
+};
 
-      const message = (error as Error).message;
-      console.error("Error granting second approval:", error);
-
-      if (message.includes("not found")) {
-        return NextResponse.json(errorEnvelope("NOT_FOUND", message), {
-          status: 404,
-        });
-      }
-
-      if (message.includes("different person")) {
-        return NextResponse.json(
-          errorEnvelope("SELF_APPROVAL_REFUSED", message),
-          { status: 403 }
-        );
-      }
-
-      if (message.includes("not awaiting")) {
-        return NextResponse.json(errorEnvelope("INVALID_STATE", message), {
-          status: 409,
-        });
-      }
-
-      return NextResponse.json(
-        errorEnvelope("INTERNAL_ERROR", "Failed to grant second approval"),
-        { status: 500 }
-      );
-    }
-  }
+export const POST = withErrorHandler(
+  withAuth(
+    "APPROVER",
+    withRateLimit("approval", approvePaymentHandler, {
+      getIdentifier: getUserIdentifier,
+    })
+  )
 );

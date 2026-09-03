@@ -60,8 +60,8 @@ export class IdempotencyError extends ApplicationError {
 }
 
 export class RateLimitError extends ApplicationError {
-  constructor(message: string = "Rate limit exceeded") {
-    super("RATE_LIMIT_EXCEEDED", message, 429);
+  constructor(message: string = "Rate limit exceeded", details?: Record<string, unknown>) {
+    super("RATE_LIMIT_EXCEEDED", message, 429, details);
     this.name = "RateLimitError";
   }
 }

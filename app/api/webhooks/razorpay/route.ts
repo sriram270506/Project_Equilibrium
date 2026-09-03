@@ -13,23 +13,26 @@ import {
 } from "@/src/lib/payments/webhook-security";
 import { logger, correlationIdFrom } from "@/src/lib/observability/logger";
 import { metrics } from "@/src/lib/observability/metrics";
+import { withRateLimit, extractIdentifier } from "@/src/lib/api/rate-limit-middleware";
+import { withErrorHandler } from "@/src/lib/api/error-handler";
 
 /**
  * POST /api/webhooks/razorpay
  *
  * Order of operations, and why each step precedes the next:
  *
- *   1. Read the RAW body. Never parse first — the signature covers exact bytes,
+ *   1. Rate limit by provider signature/IP
+ *   2. Read the RAW body. Never parse first — the signature covers exact bytes,
  *      and re-serialising JSON changes them.
- *   2. Authenticate: configuration, then signature. Fails closed outside mock.
- *   3. Validate with Zod. A malformed payload is rejected before any write.
- *   4. Reject replays outside the timestamp window.
- *   5. Deduplicate on the provider's event id.
- *   6. Only then mutate, inside one transaction.
+ *   3. Authenticate: configuration, then signature. Fails closed outside mock.
+ *   4. Validate with Zod. A malformed payload is rejected before any write.
+ *   5. Reject replays outside the timestamp window.
+ *   6. Deduplicate on the provider's event id.
+ *   7. Only then mutate, inside one transaction.
  *
- * Everything before step 6 is a rejection path that writes nothing.
+ * Everything before step 7 is a rejection path that writes nothing.
  */
-export async function POST(request: NextRequest) {
+const webhookHandler = async (request: NextRequest) => {
   const correlationId = correlationIdFrom(request);
   const log = logger.child({ correlationId, route: "webhooks/razorpay" });
   const started = Date.now();
@@ -311,7 +314,13 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+};
+
+export const POST = withErrorHandler(
+  withRateLimit("webhook", webhookHandler, {
+    getIdentifier: (req) => extractIdentifier(req, "webhook"),
+  })
+);
 
 /** Razorpay payment and payout states, mapped onto ours. */
 function mapProviderStatus(status: string): string | null {
