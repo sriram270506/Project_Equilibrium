@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "../prisma";
 import { IdempotencyError } from "../errors";
-import { generateId } from "../ids";
+import { createHash } from "crypto";
 
 /**
  * Idempotency key middleware for financial operations
@@ -47,7 +47,7 @@ export function extractIdempotencyKey(request: NextRequest): string {
  */
 export async function checkIdempotency(
   idempotencyKey: string,
-  operationType: string,
+  _operationType: string,
   requestHash: string
 ) {
   const existing = await prisma.idempotencyKey.findUnique({
@@ -135,7 +135,20 @@ export async function markIdempotencyFailed(
  * Retry-safe hash of request body
  */
 export function hashRequestBody(body: unknown): string {
-  const crypto = require("crypto");
-  const json = JSON.stringify(body);
-  return crypto.createHash("sha256").update(json).digest("hex");
+  /*
+   * Keys are sorted so that two logically identical bodies hash the same.
+   * `JSON.stringify` preserves insertion order, so {a,b} and {b,a} would
+   * otherwise produce different fingerprints and defeat idempotency for a
+   * client that happens to serialise its fields in a different order.
+   */
+  const json = JSON.stringify(body, (_key, value) =>
+    value && typeof value === "object" && !Array.isArray(value)
+      ? Object.fromEntries(
+          Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+            a.localeCompare(b)
+          )
+        )
+      : value
+  );
+  return createHash("sha256").update(json, "utf-8").digest("hex");
 }

@@ -26,6 +26,8 @@ time working out which is which. Everything below is checkable in the code.
 | Structured JSON logging with correlation ids | [logger.ts](../src/lib/observability/logger.ts) | Any request |
 | Health and metrics endpoint | `GET /api/health` | Reports degraded states |
 | Deterministic seed | [src/lib/demo/seed.ts](../src/lib/demo/seed.ts) | Two runs hash identically |
+| Multi-tenant isolation | [src/lib/tenancy/](../src/lib/tenancy/) | `demo:verify` creates a second tenant and proves queries do not cross |
+| Per-tenant roles | `TenantUser.role` | A role grants nothing outside its own tenant |
 
 ## Simulated — works, but against a simulator rather than reality
 
@@ -72,6 +74,6 @@ The correctness and reliability machinery is real and testable. The data,
 the counterparty, and the business case are not. This is a working prototype of
 a payment-operations control layer, evaluated against its own simulator.
 
-`npm run demo:verify` checks 34 invariants across every "Real" row above. It
+`npm run demo:verify` checks 39 invariants across every "Real" row above. It
 cannot check anything in the other two tables, and no amount of engineering
 would let it.

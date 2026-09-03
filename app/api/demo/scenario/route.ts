@@ -8,7 +8,7 @@ import {
   ScenarioStepId,
 } from "@/src/lib/demo/scenario";
 import { withErrorHandler } from "@/src/lib/api/error-handler";
-import { withAuth, getCaller } from "@/src/lib/api/auth-middleware";
+import { withAuth, getAuthContext } from "@/src/lib/api/auth-middleware";
 import { ValidationError } from "@/src/lib/errors";
 
 const requestSchema = z.object({
@@ -32,7 +32,7 @@ export async function GET() {
 /** Run one step of the guided walkthrough against the real services. */
 export const POST = withErrorHandler(
   withAuth("OPERATOR", async (request: NextRequest) => {
-    const caller = getCaller(request);
+    const authContext = getAuthContext(request);
     assertDemoMode(); // Demo-only endpoint
 
     const body = await request.json();
@@ -44,22 +44,14 @@ export const POST = withErrorHandler(
       });
     }
 
+    const tenantId = authContext.tenantContext?.tenantId;
     const result = await runScenarioStep(
       parsed.data.step as ScenarioStepId,
       parsed.data.context ?? {},
-      caller.userId
+      authContext.userId,
+      tenantId
     );
 
     return NextResponse.json(successEnvelope(result));
   })
 );
-      });
-    }
-
-    // These are expected, actionable conditions - tell the operator plainly.
-    return NextResponse.json(
-      errorEnvelope("STEP_FAILED", message),
-      { status: 409 }
-    );
-  }
-}

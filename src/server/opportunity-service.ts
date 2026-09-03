@@ -91,6 +91,10 @@ export async function evaluateOpportunity(
   await prisma.liquidityOpportunity.create({
     data: {
       id: opportunityId,
+      // Inherited from the supplier rather than passed in: the tenant that owns
+      // the supplier necessarily owns any offer made to them, and deriving it
+      // removes the chance of a caller planting a record in another tenant.
+      tenantId: supplier.tenantId,
       supplierId,
       predictionProbability: modelProbability,
       // Stamped from the artifact, not a literal, so stored provenance always
@@ -124,6 +128,7 @@ export async function evaluateOpportunity(
     modelVersion: LIQUIDITY_MODEL.modelVersion,
     policyVersion: policyEval.policyVersion,
     supplierId,
+    tenantId: supplier.tenantId,
   });
 
   return {
@@ -279,6 +284,7 @@ export async function approveOpportunity(
         requestFingerprint,
         providerIdempotencyKey,
         correlationId,
+        tenantId: opportunity.tenantId,
         supplierId: opportunity.supplierId,
         makerId: operatorId,
         approvalThresholdPaise: requiresDualApproval

@@ -30,6 +30,8 @@ import { setKillSwitch, getRiskLimits } from "../src/lib/risk/controls";
 import { LIQUIDITY_MODEL } from "../src/lib/ml/model-artifact";
 import { ensureSeeded, clearTransactionalState } from "../src/lib/demo/seed";
 import { OBSERVATION_DAYS } from "../src/lib/demo/supplier-profiles";
+import { scopedQueries } from "../src/lib/tenancy/scoped-queries";
+import { resolveInternalTenantId } from "../src/lib/tenancy/constants";
 
 const prisma = new PrismaClient();
 
@@ -497,6 +499,80 @@ async function main() {
       "no offer available to race"
     );
   }
+
+  /* ------------------------------------------------ tenant isolation */
+  section("13. One tenant cannot see another's data");
+
+  /*
+   * Multi-tenancy is only worth anything if it is enforced. Creating a second
+   * tenant with its own supplier and confirming the scoped queries refuse to
+   * cross the boundary is the only way to know the tenantId columns are
+   * actually being applied rather than merely present.
+   */
+  const OTHER_TENANT = "tenant_isolation_probe";
+
+  await prisma.tenant.deleteMany({ where: { id: OTHER_TENANT } });
+  await prisma.tenant.create({
+    data: {
+      id: OTHER_TENANT,
+      name: "Rival Marketplace",
+      slug: "rival-marketplace-probe",
+    },
+  });
+
+  await prisma.supplier.create({
+    data: {
+      id: "sup_rival_001",
+      tenantId: OTHER_TENANT,
+      name: "Rival Tenant Supplier",
+      email: "rival@example.test",
+      riskTier: "LOW",
+    },
+  });
+
+  const homeTenantId = await resolveInternalTenantId();
+
+  const ourSuppliers = await scopedQueries.findSuppliers(homeTenantId);
+  const theirSuppliers = await scopedQueries.findSuppliers(OTHER_TENANT);
+  const allSuppliers = await prisma.supplier.count();
+
+  check(
+    "A scoped supplier query returns only this tenant's rows",
+    ourSuppliers.every((s) => s.tenantId === homeTenantId) &&
+      ourSuppliers.length < allSuppliers,
+    `${ourSuppliers.length} of ${allSuppliers} total`
+  );
+
+  check(
+    "The other tenant sees only its own supplier",
+    theirSuppliers.length === 1 && theirSuppliers[0].id === "sup_rival_001"
+  );
+
+  check(
+    "Fetching another tenant's record by id returns nothing",
+    (await scopedQueries.findSupplierById(homeTenantId, "sup_rival_001")) === null,
+    "no cross-tenant read even with a known id"
+  );
+
+  const ourPayments = await scopedQueries.findPayments(homeTenantId);
+  const theirPayments = await scopedQueries.findPayments(OTHER_TENANT);
+
+  check(
+    "Payments are scoped too",
+    ourPayments.length > 0 && theirPayments.length === 0,
+    `${ourPayments.length} ours, ${theirPayments.length} theirs`
+  );
+
+  const ourOpportunities = await scopedQueries.findOpportunities(homeTenantId);
+  check(
+    "Opportunities are scoped and inherit the supplier's tenant",
+    ourOpportunities.length > 0 &&
+      ourOpportunities.every((o) => o.tenantId === homeTenantId)
+  );
+
+  // Clean up the probe so the demo database is left as it was found.
+  await prisma.supplier.deleteMany({ where: { tenantId: OTHER_TENANT } });
+  await prisma.tenant.delete({ where: { id: OTHER_TENANT } });
 
   /* --------------------------------------------------------- summary */
   console.log("\n" + "=".repeat(46));

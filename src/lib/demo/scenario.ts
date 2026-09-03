@@ -1,5 +1,9 @@
 import { prisma } from "../prisma";
-import { evaluateOpportunity, approveOpportunity } from "@/src/server/opportunity-service";
+import {
+  evaluateOpportunity,
+  approveOpportunity,
+  confirmSecondApproval,
+} from "@/src/server/opportunity-service";
 import {
   submitPaymentToProvider,
   simulateWebhook,
@@ -90,7 +94,11 @@ const PROTAGONIST = "Aarav Industrial Components";
 
 export async function runScenarioStep(
   step: ScenarioStepId,
-  context: Record<string, string> = {}
+  context: Record<string, string> = {},
+  /** Operator the walkthrough acts as, from the authenticated caller. */
+  operatorId: string = "priya.raman",
+  /** Tenant the walkthrough operates within. Reserved for scoped steps. */
+  _tenantId?: string
 ): Promise<ScenarioStepResult> {
   switch (step) {
     case "reset":
@@ -98,9 +106,9 @@ export async function runScenarioStep(
     case "score":
       return stepScore();
     case "approve":
-      return stepApprove(context);
+      return stepApprove(context, operatorId);
     case "timeout":
-      return stepTimeout(context);
+      return stepTimeout(context, operatorId);
     case "duplicate_webhook":
       return stepDuplicateWebhook(context);
     case "reconcile":
@@ -224,7 +232,8 @@ async function stepScore(): Promise<ScenarioStepResult> {
 /* ----------------------------------------------------------------- Step 3 */
 
 async function stepApprove(
-  context: Record<string, string>
+  context: Record<string, string>,
+  operatorId: string
 ): Promise<ScenarioStepResult> {
   let opportunityId = context.opportunityId;
 
@@ -249,7 +258,7 @@ async function stepApprove(
     throw new Error(`Offer ${opportunityId} no longer exists.`);
   }
 
-  const approval = await approveOpportunity(opportunityId, "priya.raman");
+  const approval = await approveOpportunity(opportunityId, operatorId);
 
   // Send it to the provider on the happy path.
   mockRazorpay.setFailureMode("success");
@@ -300,7 +309,8 @@ async function stepApprove(
 /* ----------------------------------------------------------------- Step 4 */
 
 async function stepTimeout(
-  context: Record<string, string>
+  context: Record<string, string>,
+  operatorId: string
 ): Promise<ScenarioStepResult> {
   const opportunity = await prisma.liquidityOpportunity.findFirst({
     where: { status: "RECOMMENDED" },
@@ -314,7 +324,38 @@ async function stepTimeout(
     );
   }
 
-  const approval = await approveOpportunity(opportunity.id, "priya.raman");
+  const approval = await approveOpportunity(opportunity.id, operatorId);
+
+  /*
+   * Clear the maker-checker gate first if this advance is large enough to
+   * need one.
+   *
+   * Without this the step tried to submit a payment still sitting in
+   * PENDING_APPROVAL and failed with "Cannot submit payment with status" -
+   * the walkthrough stopping on a control working correctly, which reads to a
+   * viewer as a bug rather than as a feature.
+   */
+  let secondApprovalCleared = false;
+  if (approval.requiresDualApproval) {
+    const checker = await prisma.tenantUser.findFirst({
+      where: {
+        role: "APPROVER",
+        isActive: true,
+        userId: { not: operatorId },
+        user: { isActive: true },
+      },
+      include: { user: true },
+    });
+
+    if (!checker) {
+      throw new Error(
+        "This advance needs a second approver and no other approver account exists."
+      );
+    }
+
+    await confirmSecondApproval(approval.paymentIntentId, checker.user.id);
+    secondApprovalCleared = true;
+  }
 
   // The interesting failure: the provider processed it, we never heard back.
   mockRazorpay.setFailureMode("timeout_after_remote_success" as FailureMode);
@@ -333,6 +374,15 @@ async function stepTimeout(
         value: formatPaise(opportunity.expectedBenefitPaise),
       },
       { label: "Payment state", value: paymentStatus, tone: "warn" },
+      ...(secondApprovalCleared
+        ? [
+            {
+              label: "Second approval",
+              value: "Required and granted by a different operator",
+              tone: "ok" as const,
+            },
+          ]
+        : []),
       {
         label: "Automatic retry",
         value: "Not attempted - would risk paying twice",

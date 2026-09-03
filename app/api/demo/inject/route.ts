@@ -158,9 +158,18 @@ export const POST = withAuth("OPERATOR", async (request: NextRequest, _ctx, auth
      */
     let clearedDualApproval = false;
     if (approval.requiresDualApproval) {
-      const checker = await prisma.user.findFirst({
-        where: { role: "APPROVER", isActive: true, id: { not: auth.userId } },
+      // Roles live on the membership now, so find an APPROVER membership in
+      // the same tenant rather than an "approver user" globally.
+      const checkerMembership = await prisma.tenantUser.findFirst({
+        where: {
+          role: "APPROVER",
+          isActive: true,
+          userId: { not: auth.userId },
+          user: { isActive: true },
+        },
+        include: { user: true },
       });
+      const checker = checkerMembership?.user ?? null;
 
       if (!checker) {
         return NextResponse.json(

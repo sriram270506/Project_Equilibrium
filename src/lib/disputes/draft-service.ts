@@ -5,11 +5,15 @@ import { generateId } from "../ids";
  * Generate dispute draft from evidence claims
  */
 export async function generateDisputeDraft(
+  tenantId: string,
   disputeCaseId: string,
   createdBy: string = "system"
 ) {
-  const disputeCase = await prisma.disputeCase.findUnique({
-    where: { id: disputeCaseId },
+  const disputeCase = await prisma.disputeCase.findFirst({
+    where: { 
+      id: disputeCaseId,
+      tenantId,
+    },
     include: {
       evidenceClaims: true,
       evidenceDocuments: true,
@@ -102,11 +106,19 @@ export async function generateDisputeDraft(
 }
 
 /**
- * Get draft for dispute case
+ * Get draft for dispute case, scoped to tenant
  */
-export async function getDisputeDraft(disputeCaseId: string) {
+export async function getDisputeDraft(
+  tenantId: string,
+  disputeCaseId: string
+) {
   return prisma.disputeDraft.findFirst({
-    where: { disputeCaseId },
+    where: { 
+      disputeCase: {
+        tenantId,
+      },
+      disputeCaseId,
+    },
     orderBy: { createdAt: "desc" },
   });
 }

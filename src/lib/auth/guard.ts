@@ -18,7 +18,13 @@ export interface AuthContext {
   userId: string;
   email: string;
   name: string;
+  /**
+   * The caller's role WITHIN `tenantId`. Roles are per-tenant, not global:
+   * being an ADMIN of one marketplace grants nothing in another.
+   */
   role: Role;
+  tenantId: string;
+  tenantSlug: string;
 }
 
 /** Ascending privilege. A role satisfies any requirement at or below it. */
@@ -49,14 +55,32 @@ export async function resolveCaller(
 
   if (!apiKey) return null;
 
-  const user = await prisma.user.findUnique({ where: { apiKey } });
+  const user = await prisma.user.findUnique({
+    where: { apiKey },
+    include: {
+      // Role lives on the membership, so authentication and authorisation are
+      // resolved together. A user with no active membership is authenticated
+      // but authorised for nothing, which is the correct default.
+      tenants: {
+        where: { isActive: true },
+        include: { tenant: true },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+
   if (!user || !user.isActive) return null;
+
+  const membership = user.tenants.find((m) => m.tenant.isActive);
+  if (!membership) return null;
 
   return {
     userId: user.id,
     email: user.email,
     name: user.name,
-    role: user.role as Role,
+    role: membership.role as Role,
+    tenantId: membership.tenantId,
+    tenantSlug: membership.tenant.slug,
   };
 }
 
@@ -118,17 +142,56 @@ function isDemoMode(): boolean {
  * rather than invented, so the audit trail still names a real user row.
  */
 async function demoFallbackIdentity(): Promise<AuthContext | null> {
-  const user = await prisma.user.findFirst({
-    where: { role: "OPERATOR", isActive: true },
+  const membership = await prisma.tenantUser.findFirst({
+    where: {
+      role: "OPERATOR",
+      isActive: true,
+      user: { isActive: true },
+      tenant: { isActive: true },
+    },
+    include: { user: true, tenant: true },
     orderBy: { createdAt: "asc" },
   });
 
-  if (!user) return null;
+  if (!membership) return null;
 
   return {
-    userId: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role as Role,
+    userId: membership.user.id,
+    email: membership.user.email,
+    name: membership.user.name,
+    role: membership.role as Role,
+    tenantId: membership.tenantId,
+    tenantSlug: membership.tenant.slug,
   };
+}
+
+/**
+ * Maker-checker: may this operator provide the SECOND approval on a payment
+ * that someone else raised?
+ *
+ * Two conditions, both required. The checker must hold APPROVER or above, and
+ * must not be the person who raised it. Self-approval defeats the entire
+ * purpose of a second signature, so it is refused here rather than relied upon
+ * to be prevented by the interface.
+ */
+export function canOperatorApprove(
+  auth: Pick<AuthContext, "userId" | "role">,
+  makerId: string | null
+): { allowed: boolean; reason?: string } {
+  if (!roleSatisfies(auth.role, "APPROVER")) {
+    return {
+      allowed: false,
+      reason: `A second approval requires the APPROVER role. This caller holds ${auth.role}.`,
+    };
+  }
+
+  if (makerId && makerId === auth.userId) {
+    return {
+      allowed: false,
+      reason:
+        "The second approver must be a different person from the one who raised this payment.",
+    };
+  }
+
+  return { allowed: true };
 }

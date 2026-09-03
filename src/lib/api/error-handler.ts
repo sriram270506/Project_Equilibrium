@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ApplicationError, ValidationError } from "../errors";
+import { ApplicationError } from "../errors";
 import { errorEnvelope } from "../api-envelope";
 
 /**

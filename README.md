@@ -45,6 +45,7 @@ moment real money moves, the interesting failures start:
 | **Explain every decision** | Each recommendation stores its feature snapshot and model version, so months later you can reconstruct exactly why money moved. |
 | **Bound the blast radius** | Daily exposure, per-transaction, and per-supplier limits are enforced *before* money moves — plus a kill switch and maker-checker above a threshold. |
 | **Detect tampering** | The audit log is a hash chain. Editing any historical row breaks every hash after it. |
+| **Isolate tenants** | Every business record carries a non-nullable `tenantId`, and roles live on the membership. One marketplace cannot read another's suppliers, payments, or audit trail. |
 
 ---
 
@@ -67,7 +68,7 @@ npm run demo:verify
 
 This drives the real services end to end — scores every supplier, approves and
 pays, clears a maker-checker gate, injects a provider timeout, replays a
-webhook, reconciles, and checks the books — asserting **34 invariants** and
+webhook, reconciles, and checks the books — asserting **39 invariants** and
 exiting non-zero if any fails.
 
 ```
@@ -80,8 +81,9 @@ exiting non-zero if any fails.
   PASS  Total debits equal total credits after two injected failures — Rs 1,58,211.22 = Rs 1,58,211.22
   PASS  Every audit entry hashes correctly and links to its predecessor
   PASS  The kill switch refuses new payments while engaged
+  PASS  Fetching another tenant's record by id returns nothing
 
-  34 passed, 0 failed
+  39 passed, 0 failed
 ```
 
 ### Retrain the model

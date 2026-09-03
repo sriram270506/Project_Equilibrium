@@ -1,54 +1,25 @@
 import { NextRequest } from "next/server";
-import { prisma } from "../prisma";
-import { AuthContext } from "./auth-context";
+import { resolveCaller, AuthContext } from "./guard";
 
 /**
- * Extract and verify API key from request
- * Looks for Authorization: Bearer <apiKey> or X-API-Key header
+ * Legacy entry points, kept so older imports keep working.
+ *
+ * These used to read `role` straight off the User row. Roles now live on the
+ * TenantUser membership, so both delegate to `resolveCaller`, which resolves
+ * identity and per-tenant role together. Two copies of authentication logic is
+ * exactly how one of them ends up out of date and permissive.
  */
-export async function verifyAuth(request: NextRequest): Promise<AuthContext | null> {
-  try {
-    // Try Authorization header first (Bearer token)
-    let apiKey = request.headers.get("authorization")?.replace("Bearer ", "");
 
-    // Fall back to X-API-Key header
-    if (!apiKey) {
-      apiKey = request.headers.get("x-api-key") ?? undefined;
-    }
-
-    if (!apiKey) {
-      return null;
-    }
-
-    // Look up user by API key
-    const user = await prisma.user.findUnique({
-      where: { apiKey },
-    });
-
-    if (!user || !user.isActive) {
-      return null;
-    }
-
-    return {
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role as "VIEWER" | "OPERATOR" | "APPROVER" | "ADMIN",
-    };
-  } catch (error) {
-    console.error("Error verifying auth:", error);
-    return null;
-  }
+export async function verifyAuth(
+  request: NextRequest
+): Promise<AuthContext | null> {
+  return resolveCaller(request);
 }
 
-/**
- * Require authentication middleware
- * Returns auth context or null if authentication failed
- */
 export async function requireAuth(request: NextRequest): Promise<AuthContext> {
-  const auth = await verifyAuth(request);
-  if (!auth) {
-    throw new Error("UNAUTHORIZED");
-  }
+  const auth = await resolveCaller(request);
+  if (!auth) throw new Error("UNAUTHORIZED");
   return auth;
 }
+
+export type { AuthContext };

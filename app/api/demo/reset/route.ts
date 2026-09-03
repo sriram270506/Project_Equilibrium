@@ -4,12 +4,12 @@ import { prisma } from "@/src/lib/prisma";
 import { LIQUIDITY_MODEL } from "@/src/lib/ml/model-artifact";
 import { NextRequest, NextResponse } from "next/server";
 import { withErrorHandler } from "@/src/lib/api/error-handler";
-import { withAuth, getCaller } from "@/src/lib/api/auth-middleware";
+import { withAuth, getAuthContext } from "@/src/lib/api/auth-middleware";
 import { ValidationError } from "@/src/lib/errors";
 
 export const POST = withErrorHandler(
   withAuth("ADMIN", async (request: NextRequest) => {
-    const caller = getCaller(request);
+    const authContext = getAuthContext(request);
     assertDemoMode(); // Demo-only endpoint
 
     const body = await request.json();
@@ -17,24 +17,57 @@ export const POST = withErrorHandler(
       throw new ValidationError("Reset confirmation required");
     }
 
-    // Clear all data
+    // Get or create demo tenant
+    let tenant = await prisma.tenant.findUnique({
+      where: { slug: "demo" },
+    });
+
+    if (!tenant) {
+      tenant = await prisma.tenant.create({
+        data: {
+          slug: "demo",
+          name: "Demo Tenant",
+          users: {
+            create: {
+              userId: authContext.userId,
+              role: "ADMIN",
+            },
+          },
+        },
+        include: {
+          users: true,
+        },
+      });
+    }
+
+    // Clear all tenant data
     await prisma.mockProviderRecord.deleteMany();
     await prisma.reconciliationCase.deleteMany();
     await prisma.disputeDraft.deleteMany();
     await prisma.evidenceClaim.deleteMany();
     await prisma.evidenceDocument.deleteMany();
-    await prisma.disputeCase.deleteMany();
-    await prisma.auditEvent.deleteMany();
+    await prisma.disputeCase.deleteMany({
+      where: { tenantId: tenant.id },
+    });
+    await prisma.auditEvent.deleteMany({
+      where: { tenantId: tenant.id },
+    });
     await prisma.eventRecord.deleteMany();
     await prisma.outboxEvent.deleteMany();
     await prisma.ledgerEntry.deleteMany();
     await prisma.ledgerTransaction.deleteMany();
-    await prisma.paymentIntent.deleteMany();
-    await prisma.liquidityOpportunity.deleteMany();
+    await prisma.paymentIntent.deleteMany({
+      where: { tenantId: tenant.id },
+    });
+    await prisma.liquidityOpportunity.deleteMany({
+      where: { tenantId: tenant.id },
+    });
     await prisma.liquidityObservation.deleteMany();
-    await prisma.supplier.deleteMany();
+    await prisma.supplier.deleteMany({
+      where: { tenantId: tenant.id },
+    });
 
-    // Re-seed database by importing and running seed
+    // Re-seed database
     const { v4: uuidv4 } = await import("uuid");
 
     // Create suppliers
@@ -42,6 +75,7 @@ export const POST = withErrorHandler(
       prisma.supplier.create({
         data: {
           id: uuidv4(),
+          tenantId: tenant.id,
           name: "Aarav Industrial Components",
           email: "finance@aarav.in",
           riskTier: "LOW",
@@ -50,6 +84,7 @@ export const POST = withErrorHandler(
       prisma.supplier.create({
         data: {
           id: uuidv4(),
+          tenantId: tenant.id,
           name: "Nila Packaging Works",
           email: "admin@nila.in",
           riskTier: "MEDIUM",
@@ -58,6 +93,7 @@ export const POST = withErrorHandler(
       prisma.supplier.create({
         data: {
           id: uuidv4(),
+          tenantId: tenant.id,
           name: "Saffron Retail Supply",
           email: "ops@saffron.in",
           riskTier: "MEDIUM",
@@ -66,6 +102,7 @@ export const POST = withErrorHandler(
       prisma.supplier.create({
         data: {
           id: uuidv4(),
+          tenantId: tenant.id,
           name: "Meridian Home Goods",
           email: "finance@meridian.in",
           riskTier: "LOW",
@@ -74,6 +111,7 @@ export const POST = withErrorHandler(
       prisma.supplier.create({
         data: {
           id: uuidv4(),
+          tenantId: tenant.id,
           name: "Kaveri Logistics Parts",
           email: "billing@kaveri.in",
           riskTier: "HIGH",
@@ -82,6 +120,7 @@ export const POST = withErrorHandler(
       prisma.supplier.create({
         data: {
           id: uuidv4(),
+          tenantId: tenant.id,
           name: "Orbit Kitchenware",
           email: "finance@orbit.in",
           riskTier: "MEDIUM",
@@ -115,6 +154,7 @@ export const POST = withErrorHandler(
     await prisma.liquidityOpportunity.create({
       data: {
         id: uuidv4(),
+        tenantId: tenant.id,
         supplierId: aarav.id,
         predictionProbability: 0.78,
         modelVersion: LIQUIDITY_MODEL.modelVersion,
@@ -141,7 +181,8 @@ export const POST = withErrorHandler(
       successEnvelope({
         message: "Demo data reset successfully",
         suppliersCreated: suppliers.length,
-        resetBy: caller.userId,
+        tenantId: tenant.id,
+        resetBy: authContext.userId,
       })
     );
   })

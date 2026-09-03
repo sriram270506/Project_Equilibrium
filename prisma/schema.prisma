@@ -8,15 +8,50 @@ datasource db {
 }
 
 // Authentication and authorization
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     TenantUser[]
+  suppliers Supplier[]
+  payments  PaymentIntent[]
+  disputes  DisputeCase[]
+  auditEvents AuditEvent[]
+  opportunities LiquidityOpportunity[]
+  
+  @@index([isActive])
+}
+
+model TenantUser {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // VIEWER, OPERATOR, APPROVER, ADMIN (per-tenant)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+  @@index([userId])
+}
+
 model User {
   id        String   @id
   email     String   @unique
   name      String
-  role      String   // VIEWER, OPERATOR, APPROVER, ADMIN
   apiKey    String   @unique
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  tenants TenantUser[]
 
   @@index([email])
   @@index([isActive])
@@ -24,6 +59,8 @@ model User {
 
 model Supplier {
   id                    String                    @id
+  tenantId              String
+  tenant                Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name                  String
   email                 String
   riskTier              String
@@ -33,6 +70,8 @@ model Supplier {
   payments              PaymentIntent[]
   auditEvents           AuditEvent[]
 
+  @@unique([tenantId, email])
+  @@index([tenantId])
   @@index([riskTier])
 }
 
@@ -54,6 +93,8 @@ model LiquidityObservation {
 
 model LiquidityOpportunity {
   id                      String   @id
+  tenantId                String
+  tenant                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   supplierId              String
   supplier                Supplier @relation(fields: [supplierId], references: [id])
   predictionProbability   Float
@@ -71,12 +112,15 @@ model LiquidityOpportunity {
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
+  @@index([tenantId])
   @@index([status])
   @@index([supplierId])
 }
 
 model PaymentIntent {
   id                      String   @id
+  tenantId                String
+  tenant                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   internalReference       String   @unique
   provider                String   @default("RAZORPAY")
   providerPaymentId       String?  @unique
@@ -107,6 +151,7 @@ model PaymentIntent {
   eventRecords            EventRecord[]
   reconciliationCases     ReconciliationCase[]
 
+  @@index([tenantId])
   @@index([status])
   @@index([supplierId])
   @@index([correlationId])
@@ -178,6 +223,8 @@ model EventRecord {
 
 model AuditEvent {
   id              String   @id
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   eventType       String
   actorType       String   // SYSTEM, OPERATOR, PROVIDER, MODEL
   actorId         String
@@ -198,6 +245,7 @@ model AuditEvent {
   previousHash    String
   entryHash       String   @unique
 
+  @@index([tenantId])
   @@index([aggregateType, aggregateId])
   @@index([createdAt])
   @@index([sequence])
@@ -205,6 +253,8 @@ model AuditEvent {
 
 model DisputeCase {
   id                  String   @id
+  tenantId            String
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   providerDisputeId   String
   paymentIntentId     String?
   reasonCode          String
@@ -215,6 +265,9 @@ model DisputeCase {
   evidenceDocuments   EvidenceDocument[]
   evidenceClaims      EvidenceClaim[]
   disputeDrafts       DisputeDraft[]
+
+  @@index([tenantId])
+  @@index([status])
 }
 
 model EvidenceDocument {

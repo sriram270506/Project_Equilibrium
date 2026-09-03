@@ -6,6 +6,12 @@ import {
   OBSERVATION_DAYS,
 } from "./supplier-profiles";
 import { evaluateOpportunity } from "@/src/server/opportunity-service";
+import {
+  DEFAULT_TENANT_ID,
+  DEFAULT_TENANT_NAME,
+  DEFAULT_TENANT_SLUG,
+  clearTenantCache,
+} from "../tenancy/constants";
 
 /**
  * Deterministic demo seed.
@@ -58,6 +64,14 @@ export interface SeedResult {
 /** Stable, human-readable ids. `sup_001`, `obs_003_017`, and so on. */
 const pad = (n: number, width = 3) => String(n).padStart(width, "0");
 
+/**
+ * Demo users and the role each holds IN the demo tenant.
+ *
+ * `role` is a property of the membership, not of the user, because a person can
+ * be an approver in one marketplace and a viewer in another. Storing it on the
+ * user would make that impossible to express and would grant privilege across
+ * tenant boundaries.
+ */
 export const DEMO_USERS = [
   {
     id: "user_viewer",
@@ -118,8 +132,11 @@ export async function clearAll(db: Db = defaultPrisma): Promise<void> {
   await db.liquidityObservation.deleteMany();
   await db.supplier.deleteMany();
   await db.demoScenario.deleteMany();
+  await db.tenantUser.deleteMany();
   await db.user.deleteMany();
+  await db.tenant.deleteMany();
   await db.riskControl.deleteMany();
+  clearTenantCache();
 }
 
 /** Clear only transactional state, keeping suppliers and their history. */
@@ -154,11 +171,38 @@ export async function seedDatabase(
 
   if (reset) await clearAll(db);
 
-  /* ------------------------------------------------------------- users */
+  /* ------------------------------------------------------------ tenant */
+  await db.tenant.create({
+    data: {
+      id: DEFAULT_TENANT_ID,
+      name: DEFAULT_TENANT_NAME,
+      slug: DEFAULT_TENANT_SLUG,
+    },
+  });
+  clearTenantCache();
+  log(`Created tenant ${DEFAULT_TENANT_SLUG}`);
+
+  /* ------------------------------------------------- users + memberships */
   for (const user of DEMO_USERS) {
-    await db.user.create({ data: { ...user } });
+    await db.user.create({
+      data: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        apiKey: user.apiKey,
+      },
+    });
+
+    await db.tenantUser.create({
+      data: {
+        id: `tu_${user.id}`,
+        tenantId: DEFAULT_TENANT_ID,
+        userId: user.id,
+        role: user.role,
+      },
+    });
   }
-  log(`Created ${DEMO_USERS.length} users`);
+  log(`Created ${DEMO_USERS.length} users and their tenant memberships`);
 
   /* --------------------------------------------- risk controls (defaults) */
   await db.riskControl.create({ data: { id: "default" } });
@@ -177,6 +221,7 @@ export async function seedDatabase(
     await db.supplier.create({
       data: {
         id: supplierId,
+        tenantId: DEFAULT_TENANT_ID,
         name: profile.name,
         email: profile.email,
         riskTier: profile.riskTier,
@@ -240,6 +285,7 @@ export async function seedDatabase(
   await db.disputeCase.create({
     data: {
       id: disputeCaseId,
+      tenantId: DEFAULT_TENANT_ID,
       providerDisputeId: "disp_demo_0001",
       reasonCode: "PRODUCT_NOT_RECEIVED",
       amountPaise: 4500000,

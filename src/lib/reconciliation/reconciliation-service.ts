@@ -212,11 +212,12 @@ async function createReconciliationCase(
 }
 
 /**
- * Run full reconciliation across all payments
+ * Run full reconciliation across all payments for a tenant
  */
-export async function runFullReconciliation() {
+export async function runFullReconciliation(tenantId?: string) {
   const payments = await prisma.paymentIntent.findMany({
     where: {
+      ...(tenantId && { tenantId }),
       status: {
         in: ["SUBMITTED", "ACKNOWLEDGED", "UNKNOWN", "CONFIRMED"],
       },

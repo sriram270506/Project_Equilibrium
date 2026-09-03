@@ -2,7 +2,7 @@ import { generateDisputeDraft } from "@/src/lib/disputes/draft-service";
 import { successEnvelope } from "@/src/lib/api-envelope";
 import { NextRequest, NextResponse } from "next/server";
 import { withErrorHandler } from "@/src/lib/api/error-handler";
-import { withAuth, getCaller } from "@/src/lib/api/auth-middleware";
+import { withAuth, getAuthContext } from "@/src/lib/api/auth-middleware";
 import { NotFoundError } from "@/src/lib/errors";
 
 export const POST = withErrorHandler(
@@ -10,11 +10,18 @@ export const POST = withErrorHandler(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
   ) => {
-    const caller = getCaller(request);
+    const authContext = getAuthContext(request);
     const { id } = await params;
-    const body = await request.json();
 
-    const result = await generateDisputeDraft(id, caller.userId);
+    if (!authContext.tenantContext) {
+      throw new NotFoundError("Tenant context not available");
+    }
+
+    const result = await generateDisputeDraft(
+      authContext.tenantContext.tenantId,
+      id,
+      authContext.userId
+    );
 
     if (!result) {
       throw new NotFoundError("Dispute case not found");
