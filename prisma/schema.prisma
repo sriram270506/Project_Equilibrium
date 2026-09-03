@@ -293,6 +293,23 @@ model MockProviderRecord {
   updatedAt               DateTime @updatedAt
 }
 
+model IdempotencyKey {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  operationType   String   // "APPROVE_OPPORTUNITY", "APPROVE_PAYMENT", "RESOLVE_RECONCILIATION", etc.
+  requestHash     String   // SHA256 hash of request body
+  operationId     String   // Reference to the financial operation
+  status          String   // "PENDING", "SUCCESS", "FAILED"
+  responseHash    String?  // SHA256 hash of response for replay
+  error           String?  // Error message if status is FAILED
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  @@index([key])
+  @@index([operationType])
+  @@index([status])
+}
+
 
 /// Runtime risk controls. A single row (id = "default") that operators can
 /// change without a deploy, because the moment you need a kill switch is

@@ -45,9 +45,37 @@ export class UnauthorizedError extends ApplicationError {
   }
 }
 
+export class ForbiddenError extends ApplicationError {
+  constructor(message: string = "Forbidden") {
+    super("FORBIDDEN", message, 403);
+    this.name = "ForbiddenError";
+  }
+}
+
 export class IdempotencyError extends ApplicationError {
   constructor(message: string, details?: Record<string, unknown>) {
     super("IDEMPOTENCY_CONFLICT", message, 409, details);
     this.name = "IdempotencyError";
+  }
+}
+
+export class RateLimitError extends ApplicationError {
+  constructor(message: string = "Rate limit exceeded") {
+    super("RATE_LIMIT_EXCEEDED", message, 429);
+    this.name = "RateLimitError";
+  }
+}
+
+export class InternalError extends ApplicationError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super("INTERNAL_ERROR", message, 500, details);
+    this.name = "InternalError";
+  }
+}
+
+export class ServiceUnavailableError extends ApplicationError {
+  constructor(message: string = "Service unavailable") {
+    super("SERVICE_UNAVAILABLE", message, 503);
+    this.name = "ServiceUnavailableError";
   }
 }

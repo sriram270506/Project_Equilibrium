@@ -3,7 +3,8 @@ import { z } from "zod";
 // Common schemas
 export const UUIDSchema = z.string().uuid();
 export const CorrelationIdSchema = z.string().min(1);
-export const IdempotencyKeySchema = z.string().min(1);
+export const IdempotencyKeySchema = z.string().min(10).max(256);
+export const UserRoleSchema = z.enum(["VIEWER", "OPERATOR", "APPROVER", "ADMIN"]);
 
 // Request/Response envelopes
 export const ApiResponseSchema = z.object({
@@ -45,13 +46,20 @@ export const GetOpportunitiesQuerySchema = z.object({
     .enum(["RECOMMENDED", "APPROVED", "REJECTED", "EXECUTED", "EXPIRED"])
     .optional(),
   riskTier: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
-  limit: z.number().int().min(1).max(100).optional(),
-  offset: z.number().int().min(0).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 export const ApproveOpportunityRequestSchema = z.object({
-  opportunityId: z.string(),
+  opportunityId: z.string().optional(),
   correlationId: z.string().optional(),
+});
+
+export const ApproveOpportunityResponseSchema = z.object({
+  paymentIntentId: z.string(),
+  status: z.string(),
+  correlationId: z.string(),
+  message: z.string(),
 });
 
 // Payment schemas
@@ -81,8 +89,21 @@ export const PaymentIntentSchema = z.object({
 
 export const GetPaymentsQuerySchema = z.object({
   status: z.string().optional(),
-  limit: z.number().int().min(1).max(100).optional(),
-  offset: z.number().int().min(0).optional(),
+  supplierId: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const ApprovePaymentRequestSchema = z.object({
+  paymentId: z.string(),
+});
+
+export const ApprovePaymentResponseSchema = z.object({
+  paymentId: z.string(),
+  status: z.string(),
+  checkedBy: z.string(),
+  checkedAt: z.date(),
+  message: z.string(),
 });
 
 // Reconciliation schemas
@@ -103,10 +124,25 @@ export const ReconciliationCaseSchema = z.object({
   resolvedAt: z.date().nullable(),
 });
 
+export const GetReconciliationQuerySchema = z.object({
+  status: z.enum(["OPEN", "INVESTIGATING", "RESOLVED", "FROZEN"]).optional(),
+  outcome: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 export const ResolveReconciliationRequestSchema = z.object({
   caseId: z.string(),
   resolution: z.enum(["ACCEPT", "INVESTIGATE", "FREEZE"]),
-  notes: z.string().min(1),
+  notes: z.string().min(15).max(1000),
+});
+
+export const ResolveReconciliationResponseSchema = z.object({
+  caseId: z.string(),
+  status: z.string(),
+  resolvedBy: z.string(),
+  resolvedAt: z.date(),
+  message: z.string(),
 });
 
 // Dispute schemas
@@ -120,6 +156,12 @@ export const DisputeCaseSchema = z.object({
   updatedAt: z.date(),
 });
 
+export const GetDisputesQuerySchema = z.object({
+  status: z.enum(["OPEN", "DRAFT_READY", "NEEDS_REVIEW", "SUBMITTED", "CLOSED"]).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 export const GenerateDisputeDraftRequestSchema = z.object({
   disputeCaseId: z.string(),
 });
@@ -131,6 +173,53 @@ export const DisputeDraftSchema = z.object({
   validationStatus: z.enum(["PASSED", "FAILED", "NEEDS_REVIEW"]),
   validationErrors: z.string().array().optional(),
   createdAt: z.date(),
+});
+
+// Webhook schemas
+export const RazorpayWebhookSchema = z.object({
+  id: z.string(),
+  entity: z.string(),
+  event: z.string(),
+  contains: z.string().array(),
+  payload: z.object({
+    payment: z.object({
+      entity: z.object({
+        id: z.string(),
+        status: z.string(),
+        amount: z.number().int(),
+      }),
+    }),
+  }),
+  created_at: z.number().int(),
+});
+
+// Audit schemas
+export const GetAuditQuerySchema = z.object({
+  eventType: z.string().optional(),
+  actorId: z.string().optional(),
+  aggregateId: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const CorruptAuditRequestSchema = z.object({
+  entryIndex: z.number().int().min(0),
+});
+
+// Health/status schemas
+export const HealthCheckResponseSchema = z.object({
+  status: z.enum(["healthy", "degraded", "unhealthy"]),
+  timestamp: z.date(),
+  components: z.object({
+    database: z.enum(["up", "down"]),
+    payments: z.enum(["up", "down"]),
+    webhooks: z.enum(["up", "down"]),
+  }),
+  metrics: z.object({
+    uptime: z.number(),
+    requestsPerSecond: z.number(),
+    activeConnections: z.number(),
+  }),
 });
 
 // Dashboard schemas
@@ -153,3 +242,21 @@ export const RunDemoScenarioRequestSchema = z.object({
 export const ResetDemoRequestSchema = z.object({
   confirm: z.boolean(),
 });
+
+export const InjectFailureRequestSchema = z.object({
+  failureMode: z.enum([
+    "timeout_before_submit",
+    "timeout_after_submit",
+    "timeout_after_remote_success",
+    "network_error",
+    "provider_decline",
+  ]),
+  paymentId: z.string().optional(),
+});
+
+// Type exports for use in routes
+export type OpportunityRequest = z.infer<typeof ApproveOpportunityRequestSchema>;
+export type PaymentRequest = z.infer<typeof ApprovePaymentRequestSchema>;
+export type ReconciliationRequest = z.infer<typeof ResolveReconciliationRequestSchema>;
+export type DisputeRequest = z.infer<typeof GenerateDisputeDraftRequestSchema>;
+export type WebhookRequest = z.infer<typeof RazorpayWebhookSchema>;
