@@ -38,7 +38,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     email: "finance@aarav.in",
     riskTier: "LOW",
     story:
-      "Machine parts for two large OEMs. Reliable revenue, but both customers pay on 45-day terms and payroll is weekly.",
+      "Machine parts for two large OEMs in Pune. Reliable revenue, but both customers pay on 45-day terms and payroll is weekly.",
     shape: {
       dailyOutflowPaise: 62000,
       endingRunwayDays: 2.4,
@@ -52,7 +52,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     email: "billing@kaveri.in",
     riskTier: "HIGH",
     story:
-      "Truck spares distributor. Thin margins, lumpy demand, and a customer base that pays late as a matter of habit.",
+      "Truck spares distributor in Coimbatore. Thin margins, lumpy demand, and customers who pay late as a matter of habit.",
     shape: {
       dailyOutflowPaise: 48000,
       endingRunwayDays: 1.8,
@@ -62,11 +62,25 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     },
   },
   {
+    name: "Vindhya Textile Mills",
+    email: "accounts@vindhya.in",
+    riskTier: "HIGH",
+    story:
+      "Cotton fabric supplier in Surat. A single anchor buyer stretched terms from 30 to 60 days last quarter.",
+    shape: {
+      dailyOutflowPaise: 88000,
+      endingRunwayDays: 3.1,
+      paymentRegularity: 0.48,
+      volatility: 0.38,
+      deteriorating: true,
+    },
+  },
+  {
     name: "Nila Packaging Works",
     email: "admin@nila.in",
     riskTier: "MEDIUM",
     story:
-      "Corrugated packaging. Seasonal, and currently between two large orders - borderline rather than distressed.",
+      "Corrugated packaging in Chennai. Seasonal, currently between two large orders - borderline rather than distressed.",
     shape: {
       dailyOutflowPaise: 38000,
       endingRunwayDays: 6.5,
@@ -76,11 +90,39 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     },
   },
   {
+    name: "Bhavani Agro Processing",
+    email: "finance@bhavani.in",
+    riskTier: "MEDIUM",
+    story:
+      "Spice grading and packing in Guntur. Harvest-cycle cash flows mean predictable troughs.",
+    shape: {
+      dailyOutflowPaise: 54000,
+      endingRunwayDays: 5.2,
+      paymentRegularity: 0.66,
+      volatility: 0.35,
+      deteriorating: true,
+    },
+  },
+  {
+    name: "Girnar Auto Fasteners",
+    email: "ops@girnar.in",
+    riskTier: "MEDIUM",
+    story:
+      "Nuts and bolts for the Rajkot auto cluster. Steady orders, but one buyer disputes invoices routinely.",
+    shape: {
+      dailyOutflowPaise: 41000,
+      endingRunwayDays: 8.4,
+      paymentRegularity: 0.63,
+      volatility: 0.29,
+      deteriorating: false,
+    },
+  },
+  {
     name: "Saffron Retail Supply",
     email: "ops@saffron.in",
     riskTier: "MEDIUM",
     story:
-      "FMCG distributor with a broad retail base. Many small customers paying quickly smooths the cash curve.",
+      "FMCG distributor in Jaipur with a broad retail base. Many small customers paying quickly smooths the cash curve.",
     shape: {
       dailyOutflowPaise: 55000,
       endingRunwayDays: 16,
@@ -90,11 +132,53 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     },
   },
   {
+    name: "Konkan Marine Exports",
+    email: "finance@konkan.in",
+    riskTier: "HIGH",
+    story:
+      "Seafood exporter in Ratnagiri. Letter-of-credit cycles make receipts chunky and hard to time.",
+    shape: {
+      dailyOutflowPaise: 96000,
+      endingRunwayDays: 9.5,
+      paymentRegularity: 0.58,
+      volatility: 0.52,
+      deteriorating: false,
+    },
+  },
+  {
+    name: "Orbit Kitchenware",
+    email: "finance@orbit.in",
+    riskTier: "MEDIUM",
+    story:
+      "Kitchen equipment for restaurants in Hyderabad. Steady repeat orders and disciplined collections.",
+    shape: {
+      dailyOutflowPaise: 44000,
+      endingRunwayDays: 13,
+      paymentRegularity: 0.85,
+      volatility: 0.17,
+      deteriorating: false,
+    },
+  },
+  {
+    name: "Deccan Print Solutions",
+    email: "billing@deccanprint.in",
+    riskTier: "LOW",
+    story:
+      "Commercial printing in Bengaluru. Advance deposits on large jobs keep the balance healthy.",
+    shape: {
+      dailyOutflowPaise: 33000,
+      endingRunwayDays: 19,
+      paymentRegularity: 0.91,
+      volatility: 0.12,
+      deteriorating: false,
+    },
+  },
+  {
     name: "Meridian Home Goods",
     email: "finance@meridian.in",
     riskTier: "LOW",
     story:
-      "Established homeware brand. Holds a working-capital buffer by policy and collects promptly.",
+      "Established homeware brand in Noida. Holds a working-capital buffer by policy and collects promptly.",
     shape: {
       dailyOutflowPaise: 71000,
       endingRunwayDays: 22,
@@ -104,16 +188,16 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     },
   },
   {
-    name: "Orbit Kitchenware",
-    email: "finance@orbit.in",
-    riskTier: "MEDIUM",
+    name: "Sundaram Electricals",
+    email: "accounts@sundaram.in",
+    riskTier: "LOW",
     story:
-      "Kitchen equipment for restaurants. Steady repeat orders and disciplined collections.",
+      "Switchgear assembly in Madurai. Long-tenured supplier with the strongest collections on the platform.",
     shape: {
-      dailyOutflowPaise: 44000,
-      endingRunwayDays: 13,
-      paymentRegularity: 0.85,
-      volatility: 0.17,
+      dailyOutflowPaise: 67000,
+      endingRunwayDays: 26,
+      paymentRegularity: 0.95,
+      volatility: 0.08,
       deteriorating: false,
     },
   },

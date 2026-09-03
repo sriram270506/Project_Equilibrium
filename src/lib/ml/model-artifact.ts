@@ -64,6 +64,16 @@ export interface ModelArtifact {
   };
   calibrationNote: string;
   limitations: string[];
+  negativeControls?: {
+    permutationAucMean: number;
+    permutationAucRange: number[];
+    permutations: number;
+    realPredictionSpread: number;
+    permutedPredictionSpread: number;
+    labelFlipRate: number;
+    passes: boolean;
+    note: string;
+  };
 }
 
 export const LIQUIDITY_MODEL: ModelArtifact = generated as ModelArtifact;

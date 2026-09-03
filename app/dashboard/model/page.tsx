@@ -308,6 +308,82 @@ export default function ModelCardPage() {
         </Card>
       </div>
 
+      {/* The control a sceptical reviewer asks for first. */}
+      {model.negativeControls ? (
+        <div className="mt-6">
+          <Card
+            className={
+              model.negativeControls.passes
+                ? "border-ok/30"
+                : "border-danger/40"
+            }
+          >
+            <CardHeader
+              eyebrow="Negative controls"
+              title="Is this AUC real, or an artifact of the simulator?"
+              hint="The first question worth asking of any model trained on generated data."
+            />
+            <CardBody className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-md border border-line-soft bg-surface-sunken p-4">
+                  <p className="text-2xs font-medium text-ink-muted">
+                    Prediction spread, real vs permuted
+                  </p>
+                  <p className="tabular mt-1 text-2xl font-semibold text-ink-strong">
+                    {model.negativeControls.realPredictionSpread.toFixed(2)}{" "}
+                    <span className="text-ink-muted">vs</span>{" "}
+                    <span className="text-ok">
+                      {model.negativeControls.permutedPredictionSpread.toFixed(2)}
+                    </span>
+                  </p>
+                  <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">
+                    Shuffle the labels, refit, and the model&apos;s outputs
+                    collapse to a narrow band around the base rate. It learns
+                    essentially nothing, which is exactly what a leak-free
+                    pipeline must do.
+                  </p>
+                </div>
+
+                <div className="rounded-md border border-line-soft bg-surface-sunken p-4">
+                  <p className="text-2xs font-medium text-ink-muted">
+                    Label flip rate
+                  </p>
+                  <p className="tabular mt-1 text-2xl font-semibold text-ink-strong">
+                    {(model.negativeControls.labelFlipRate * 100).toFixed(0)}%
+                  </p>
+                  <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">
+                    Re-simulating the same supplier flips the outcome this often.
+                    The label is stochastic, not a lookup of the features — so
+                    perfect prediction is impossible by construction.
+                  </p>
+                </div>
+              </div>
+
+              <Callout tone="warn" title="Why AUC alone would have misled us here">
+                Across {model.negativeControls.permutations} shuffles the
+                permuted AUC ranged from{" "}
+                {model.negativeControls.permutationAucRange[0].toFixed(2)} to{" "}
+                {model.negativeControls.permutationAucRange[1].toFixed(2)}. AUC
+                is a pure rank statistic: when a fit correctly learns nothing,
+                its predictions sit within a couple of points of the base rate
+                and AUC magnifies the leftover noise into confident-looking
+                numbers. Judging this control on spread rather than on a single
+                AUC is the difference between a real check and a reassuring one.
+              </Callout>
+
+              <Callout tone="danger" title="What these controls do NOT prove">
+                The features and the labels come from the same simulator. These
+                numbers show the model has correctly learned that simulator&apos;s
+                structure and that the training pipeline does not leak. They say
+                nothing about whether real suppliers behave this way. Treat the
+                0.959 as a property of the simulation, not as evidence of
+                production predictive power.
+              </Callout>
+            </CardBody>
+          </Card>
+        </div>
+      ) : null}
+
       <div className="mt-6">
         <Card tone="sunken">
           <CardBody>

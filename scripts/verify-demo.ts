@@ -28,6 +28,8 @@ import { calculateTrialBalance } from "../src/lib/ledger/trial-balance";
 import { verifyAuditChain } from "../src/lib/audit";
 import { setKillSwitch, getRiskLimits } from "../src/lib/risk/controls";
 import { LIQUIDITY_MODEL } from "../src/lib/ml/model-artifact";
+import { ensureSeeded, clearTransactionalState } from "../src/lib/demo/seed";
+import { OBSERVATION_DAYS } from "../src/lib/demo/supplier-profiles";
 
 const prisma = new PrismaClient();
 
@@ -59,27 +61,33 @@ async function main() {
   console.log("===================================");
 
   /* ------------------------------------------------------- clean state */
-  section("1. Reset transactional state");
+  section("1. Prepare the database");
 
-  await prisma.reconciliationCase.deleteMany();
-  await prisma.mockProviderRecord.deleteMany();
-  await prisma.auditEvent.deleteMany();
-  await prisma.eventRecord.deleteMany();
-  await prisma.outboxEvent.deleteMany();
-  await prisma.ledgerEntry.deleteMany();
-  await prisma.ledgerTransaction.deleteMany();
-  await prisma.paymentIntent.deleteMany();
-  await prisma.liquidityOpportunity.deleteMany();
+  /*
+   * Seed if empty, so this works against a database that has only just been
+   * created. Requiring a manual `npm run db:seed` first meant the verifier
+   * failed on a fresh clone - the exact situation a reviewer is in.
+   */
+  const { seeded } = await ensureSeeded({ quiet: true }, prisma);
+  console.log(
+    seeded
+      ? "  Database was empty - seeded it."
+      : "  Database already has suppliers - reusing them."
+  );
+
+  await clearTransactionalState(prisma);
   await setKillSwitch(false, "verify-script");
 
   const suppliers = await prisma.supplier.findMany();
   const observations = await prisma.liquidityObservation.count();
 
-  check("Suppliers are seeded", suppliers.length > 0, `${suppliers.length} suppliers`);
+  check("Suppliers exist", suppliers.length > 0, `${suppliers.length} suppliers`);
   check(
     "Every supplier has cash-flow history",
-    observations >= suppliers.length * 10,
-    `${observations} observations`
+    // Explicit non-zero floor. `observations >= suppliers.length * 10` passed
+    // vacuously at 0 >= 0 on an empty database, hiding the real failure.
+    observations > 0 && observations >= suppliers.length * OBSERVATION_DAYS,
+    `${observations} observations across ${suppliers.length} suppliers`
   );
 
   /* ------------------------------------------------------------ model */
@@ -176,10 +184,34 @@ async function main() {
   /* ------------------------------------------------ injected timeout */
   section("5. Survive a provider timeout");
 
-  const secondOffer = await prisma.liquidityOpportunity.findFirst({
-    where: { status: "RECOMMENDED" },
-    orderBy: { predictionProbability: "asc" },
-  });
+  /*
+   * Deliberately pick an offer ABOVE the dual-approval threshold, so the
+   * maker-checker path is exercised every run. Picking whatever happened to be
+   * next meant those three checks silently vanished on some runs - a check that
+   * only sometimes runs is not a check.
+   */
+  const riskLimits = await getRiskLimits();
+  const secondOffer =
+    (await prisma.liquidityOpportunity.findFirst({
+      where: {
+        status: "RECOMMENDED",
+        expectedBenefitPaise: { gte: riskLimits.dualApprovalThresholdPaise },
+      },
+      orderBy: { expectedBenefitPaise: "asc" },
+    })) ??
+    (await prisma.liquidityOpportunity.findFirst({
+      where: { status: "RECOMMENDED" },
+      orderBy: { predictionProbability: "asc" },
+    }));
+
+  check(
+    "An offer above the dual-approval threshold exists to test with",
+    secondOffer !== null &&
+      secondOffer.expectedBenefitPaise >= riskLimits.dualApprovalThresholdPaise,
+    secondOffer
+      ? `${rupees(secondOffer.expectedBenefitPaise)} vs threshold ${rupees(riskLimits.dualApprovalThresholdPaise)}`
+      : "no offers remain"
+  );
 
   if (secondOffer) {
     const timeoutApproval = await approveOpportunity(secondOffer.id, "verify-maker");
@@ -397,6 +429,57 @@ async function main() {
   await setKillSwitch(false, "verify-script");
   const limits = await getRiskLimits();
   check("The kill switch released cleanly", limits.killSwitchEngaged === false);
+
+  /* ---------------------------------------------------- concurrency */
+  section("12. Concurrent approvals cannot double-pay");
+
+  const raceOffer = await prisma.liquidityOpportunity.findFirst({
+    where: { status: "RECOMMENDED" },
+    orderBy: { expectedBenefitPaise: "asc" },
+  });
+
+  if (raceOffer) {
+    const paymentsBefore = await prisma.paymentIntent.count({
+      where: { supplierId: raceOffer.supplierId },
+    });
+
+    // Ten callers race for the same offer. Exactly one may win.
+    const outcomes = await Promise.allSettled(
+      Array.from({ length: 10 }, (_, i) =>
+        approveOpportunity(raceOffer.id, `race-operator-${i}`)
+      )
+    );
+
+    const succeeded = outcomes.filter((o) => o.status === "fulfilled").length;
+    const paymentsAfter = await prisma.paymentIntent.count({
+      where: { supplierId: raceOffer.supplierId },
+    });
+    const created = paymentsAfter - paymentsBefore;
+
+    check(
+      "Exactly one of ten concurrent approvals succeeds",
+      succeeded === 1,
+      `${succeeded} succeeded, ${10 - succeeded} rejected`
+    );
+    check(
+      "Exactly one payment intent is created",
+      created === 1,
+      `${created} created`
+    );
+
+    const raceBalance = await calculateTrialBalance();
+    check(
+      "The ledger still balances after the race",
+      raceBalance.balanced,
+      `${rupees(raceBalance.totalDebits)} = ${rupees(raceBalance.totalCredits)}`
+    );
+  } else {
+    check(
+      "Exactly one of ten concurrent approvals succeeds",
+      false,
+      "no offer available to race"
+    );
+  }
 
   /* --------------------------------------------------------- summary */
   console.log("\n" + "=".repeat(46));

@@ -4,7 +4,10 @@ import { evaluatePolicy } from "@/src/lib/economic-policy";
 import { generateId, generatePaymentId, generateIdempotencyKey } from "@/src/lib/ids";
 import { createAuditEvent } from "@/src/lib/audit";
 import { generateRequestFingerprint } from "@/src/lib/idempotency";
-import { assertOpportunityTransition } from "@/src/lib/state-machine";
+import {
+  assertOpportunityTransition,
+  OpportunityStatus,
+} from "@/src/lib/state-machine";
 import { assertLedgerBalanced } from "@/src/lib/ledger/trial-balance";
 import {
   checkRiskControls,
@@ -20,7 +23,13 @@ export async function evaluateOpportunity(
   supplierId: string,
   merchantBenefitPaise: number,
   platformOpportunityCostPaise: number = 5000,
-  estimatedRiskPaise: number = 50000
+  estimatedRiskPaise: number = 50000,
+  /**
+   * Optional stable id. Runtime scoring mints a UUID; the seed passes an
+   * explicit id so a seeded database is byte-identical between runs and two
+   * reviewers can diff their databases.
+   */
+  opportunityIdOverride?: string
 ) {
   const supplier = await prisma.supplier.findUnique({
     where: { id: supplierId },
@@ -75,7 +84,7 @@ export async function evaluateOpportunity(
   });
 
   // Create opportunity record
-  const opportunityId = generateId();
+  const opportunityId = opportunityIdOverride ?? generateId();
 
   await prisma.liquidityOpportunity.create({
     data: {
@@ -132,25 +141,61 @@ export async function approveOpportunity(
   opportunityId: string,
   operatorId: string = "demo-finance-operator"
 ) {
-  const opportunity = await prisma.liquidityOpportunity.findUnique({
+  const existing = await prisma.liquidityOpportunity.findUnique({
     where: { id: opportunityId },
   });
 
-  if (!opportunity) {
+  if (!existing) {
     throw new Error(`Opportunity not found: ${opportunityId}`);
   }
 
-  if (opportunity.status !== "RECOMMENDED") {
+  // Fail fast with a useful message before doing any work.
+  if (existing.status !== "RECOMMENDED") {
     throw new Error(
-      `Cannot approve opportunity with status: ${opportunity.status}`
+      `Cannot approve opportunity with status: ${existing.status}`
     );
   }
 
-  // Validate state transition
-  assertOpportunityTransition(
-    opportunity.status as any,
-    "APPROVED"
-  );
+  assertOpportunityTransition(existing.status as OpportunityStatus, "APPROVED");
+
+  /*
+   * Claim the opportunity with a compare-and-swap BEFORE doing anything else.
+   *
+   * The check above is necessary for a good error message but is not sufficient
+   * on its own: between reading the row and writing the payment, another
+   * request can read the same RECOMMENDED row and both can proceed, producing
+   * two payment intents and paying the supplier twice.
+   *
+   * `updateMany` with the status in the WHERE clause compiles to a single
+   * conditional UPDATE. Exactly one concurrent caller can match a row whose
+   * status is still RECOMMENDED; every other caller matches zero rows and is
+   * turned away here, before any money is committed.
+   */
+  const claim = await prisma.liquidityOpportunity.updateMany({
+    where: { id: opportunityId, status: "RECOMMENDED" },
+    data: { status: "APPROVED" },
+  });
+
+  if (claim.count === 0) {
+    throw new Error(
+      `Cannot approve opportunity with status: already claimed by another request`
+    );
+  }
+
+  const opportunity = existing;
+
+  /**
+   * Put the opportunity back if we claimed it but cannot go through with the
+   * approval. Without this, a rejection by risk controls would strand the offer
+   * in APPROVED with no payment behind it - permanently unapprovable, and
+   * invisible on the dashboard.
+   */
+  const releaseClaim = async () => {
+    await prisma.liquidityOpportunity.updateMany({
+      where: { id: opportunityId, status: "APPROVED" },
+      data: { status: "RECOMMENDED" },
+    });
+  };
 
   /*
    * Risk controls run before anything is written.
@@ -166,6 +211,7 @@ export async function approveOpportunity(
   );
 
   if (!risk.allowed) {
+    await releaseClaim();
     throw new RiskControlError(
       risk.violations.map((v) => v.message).join(" "),
       risk.violations
@@ -199,8 +245,11 @@ export async function approveOpportunity(
 
   const requestFingerprint = generateRequestFingerprint(requestPayload);
 
-  // Atomic transaction: all writes succeed or all fail
-  const result = await prisma.$transaction(async (tx) => {
+  // Atomic transaction: all writes succeed or all fail. If it throws, the
+  // claim is released so the offer returns to the queue rather than vanishing.
+  let result;
+  try {
+    result = await prisma.$transaction(async (tx) => {
     // 1. Create payment intent
     const paymentIntent = await tx.paymentIntent.create({
       data: {
@@ -294,14 +343,15 @@ export async function approveOpportunity(
       },
     });
 
-    // 5. Update opportunity status
-    await tx.liquidityOpportunity.update({
-      where: { id: opportunityId },
-      data: { status: "APPROVED" },
-    });
+    // The opportunity was already claimed atomically before this transaction
+    // opened, so there is no status update to make here.
 
-    return paymentIntent;
-  });
+      return paymentIntent;
+    });
+  } catch (error) {
+    await releaseClaim();
+    throw error;
+  }
 
   // Verify ledger invariant after transaction
   await assertLedgerBalanced();
