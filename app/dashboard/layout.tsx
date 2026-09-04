@@ -98,16 +98,25 @@ const SECTIONS: Array<{
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-surface-page">
-      <div className="flex">
+    <div className="relative min-h-screen">
+      {/* Aurora sits behind everything and never intercepts a pointer. */}
+      <div className="aurora-field aurora-drift" aria-hidden="true" />
+
+      <div className="relative z-10 flex">
         {/* -------------------------------------------------------- Sidebar */}
-        <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col overflow-y-auto bg-surface-inverse text-ink-inverse">
+        <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-white/[0.07] bg-canvas-deep/70 backdrop-blur-2xl">
           <div className="px-5 py-5">
-            <Link href="/" className="focusable block rounded">
-              <h1 className="text-lg font-semibold tracking-tight text-white">
-                Equilibrium
+            <Link href="/" className="focusable group block rounded-lg">
+              <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-ink-strong">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-60" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-gradient-to-br from-brand-bright to-cyanAccent" />
+                </span>
+                <span className="transition-colors duration-200 group-hover:text-brand-bright">
+                  Equilibrium
+                </span>
               </h1>
-              <p className="mt-0.5 text-2xs leading-snug text-slate-400">
+              <p className="mt-1 pl-[18px] text-2xs leading-snug text-ink-faint">
                 Early payments, proven correct
               </p>
             </Link>
@@ -116,7 +125,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <nav className="flex-1 space-y-5 px-3 pb-4">
             {SECTIONS.map((section) => (
               <div key={section.heading}>
-                <p className="px-2 pb-1.5 text-2xs font-semibold uppercase tracking-wider text-slate-500">
+                <p className="px-2 pb-2 text-2xs font-semibold uppercase tracking-[0.12em] text-ink-faint">
                   {section.heading}
                 </p>
                 <div className="space-y-0.5">
@@ -133,20 +142,25 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             ))}
           </nav>
 
-          <div className="border-t border-slate-800 px-5 py-4">
-            <p className="text-2xs font-medium text-slate-300">
-              Priya Raman
-            </p>
-            <p className="text-2xs text-slate-500">Finance operator</p>
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-2xs font-medium text-amber-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+          <div className="border-t border-white/[0.07] px-5 py-4">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand to-violetAccent text-2xs font-semibold text-white">
+                PR
+              </span>
+              <div className="min-w-0">
+                <p className="text-2xs font-medium text-ink-body">Priya Raman</p>
+                <p className="text-2xs text-ink-faint">Finance operator</p>
+              </div>
+            </div>
+            <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-warn/30 bg-warn/[0.12] px-2.5 py-1 text-2xs font-medium text-warn backdrop-blur-md">
+              <span className="status-breathe h-1.5 w-1.5 rounded-full bg-warn" />
               Mock provider · synthetic data
             </p>
           </div>
         </aside>
 
         {/* ----------------------------------------------------------- Main */}
-        <main className="min-w-0 flex-1 px-8 py-7">{children}</main>
+        <main className="min-w-0 flex-1 px-8 py-8">{children}</main>
       </div>
     </div>
   );

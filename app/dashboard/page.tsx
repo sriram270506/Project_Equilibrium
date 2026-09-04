@@ -121,7 +121,7 @@ export default function OverviewPage() {
           </p>
           <Link
             href="/dashboard/opportunities"
-            className="focusable mt-3 inline-flex rounded-md bg-brand px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-brand-strong"
+            className="focusable mt-3 inline-flex rounded-md bg-brand-deep px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-brand"
           >
             Review suppliers at risk
           </Link>
@@ -179,8 +179,8 @@ export default function OverviewPage() {
         <Card
           className={
             integrity.ledgerBalanced
-              ? "border-ok/30 bg-ok-wash"
-              : "border-danger/40 bg-danger-wash"
+              ? "border-ok/30 bg-ok/[0.12]"
+              : "border-danger/40 bg-danger/[0.12]"
           }
         >
           <CardBody className="flex flex-wrap items-center justify-between gap-4">
@@ -226,7 +226,7 @@ export default function OverviewPage() {
             action={
               <Link
                 href="/dashboard/payments"
-                className="focusable text-[13px] font-medium text-brand-strong hover:underline"
+                className="focusable text-[13px] font-medium text-brand-bright hover:underline"
               >
                 View all
               </Link>
@@ -237,14 +237,14 @@ export default function OverviewPage() {
               Approve an offer from{" "}
               <Link
                 href="/dashboard/opportunities"
-                className="font-medium text-brand-strong hover:underline"
+                className="font-medium text-brand-bright hover:underline"
               >
                 suppliers at risk
               </Link>
               , or run the{" "}
               <Link
                 href="/dashboard/demo"
-                className="font-medium text-brand-strong hover:underline"
+                className="font-medium text-brand-bright hover:underline"
               >
                 guided walkthrough
               </Link>{" "}
@@ -267,7 +267,7 @@ export default function OverviewPage() {
                     <Td>
                       <Link
                         href={`/dashboard/payments/${p.id}`}
-                        className="focusable font-medium text-ink-strong hover:text-brand-strong hover:underline"
+                        className="focusable font-medium text-ink-strong hover:text-brand-bright hover:underline"
                       >
                         {p.supplierName}
                       </Link>
@@ -306,7 +306,7 @@ export default function OverviewPage() {
               action={
                 <Link
                   href={`/dashboard/opportunities/${headline.mostUrgent.opportunityId}`}
-                  className="focusable rounded-md bg-brand px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-brand-strong"
+                  className="focusable rounded-md bg-brand-deep px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-brand"
                 >
                   Review and decide
                 </Link>

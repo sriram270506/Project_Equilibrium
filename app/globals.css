@@ -3,110 +3,434 @@
 @tailwind utilities;
 
 /*
- * Equilibrium design tokens.
+ * Equilibrium design system — "liquid glass" fintech console.
  *
- * This is a financial operations console: dense, high-contrast, and legible on a
- * projector. We deliberately pin color-scheme to light so the app renders
- * identically on every reviewer's machine — a previous dark-mode block flipped
- * body text to near-white while every card stayed white, which made the whole
- * UI look washed out on dark-mode laptops.
+ * A dark, depth-layered surface treatment: translucent panels floating over an
+ * aurora-lit canvas, with a physical inner highlight on every edge so glass
+ * reads as a material rather than as transparency.
+ *
+ * THE DISCIPLINE THAT MAKES THIS WORK. Glassmorphism usually destroys
+ * legibility, because designers blur a bright backdrop and put grey text on it.
+ * Every rule here protects contrast instead:
+ *
+ *   - Glass panels sit on a DARK base and add only 4-8% white, so the surface
+ *     stays dark and near-white text keeps a 12:1+ contrast ratio.
+ *   - Every surface declares an explicit background colour. Blur is decoration
+ *     on top, never the thing making a panel readable.
+ *   - Money and identifiers never sit on blurred imagery.
+ *   - Aurora glows are pinned behind everything at low alpha and are never
+ *     allowed under body copy at full strength.
+ *
+ * This is a money console. If a number is hard to read, the aesthetic is wrong.
  */
+
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
-  /* Surfaces */
-  --surface-page: 248 250 252;
-  --surface-card: 255 255 255;
-  --surface-sunken: 241 245 249;
-  --surface-inverse: 9 14 38;
+  /* Canvas — deep navy-black, the ground everything floats over */
+  --canvas-base: 7 11 24;
+  --canvas-deep: 4 7 17;
+  --canvas-raised: 13 19 38;
 
-  /* Ink */
-  --ink-strong: 12 18 38;
-  --ink-body: 39 51 76;
-  --ink-muted: 92 106 133;
-  --ink-inverse: 248 250 252;
+  /* Glass surfaces: alpha applied over the dark canvas */
+  --glass-surface: 255 255 255;
+  --glass-alpha: 0.045;
+  --glass-alpha-raised: 0.075;
+  --glass-alpha-hover: 0.095;
+  --glass-border: 255 255 255;
+  --glass-border-alpha: 0.10;
+  --glass-border-alpha-hover: 0.22;
 
-  /* Lines */
-  --line-soft: 226 232 240;
-  --line-strong: 203 213 225;
+  /* Ink — near-white through to muted, all checked against the glass base */
+  --ink-strong: 248 250 252;
+  --ink-body: 203 213 225;
+  --ink-muted: 148 163 184;
+  /*
+   * Raised from slate-500 (100 116 139). At 11-13px on this canvas that gave
+   * 4.23:1 — under the 4.5:1 AA floor for small text, and it was used for every
+   * navigation hint and card sub-label. Dimmer looked better and failed 24
+   * elements; this keeps the hierarchy while staying readable.
+   */
+  --ink-faint: 130 146 170;
+  --ink-inverse: 7 11 24;
 
-  /* Brand — deep navy + a single confident blue accent */
-  --brand-ink: 9 14 38;
-  --brand: 37 99 235;
-  --brand-strong: 29 78 216;
-  --brand-wash: 239 246 255;
+  /* Brand — electric blue into cyan, the accent that carries the product */
+  --brand: 59 130 246;
+  --brand-bright: 96 165 250;
+  --brand-deep: 37 99 235;
+  --accent-cyan: 34 211 238;
+  --accent-violet: 139 92 246;
 
-  /* Semantic status */
-  --ok: 4 120 87;
-  --ok-wash: 236 253 245;
-  --warn: 180 83 9;
-  --warn-wash: 255 251 235;
-  --danger: 190 18 60;
-  --danger-wash: 255 241 242;
-  --info: 67 56 202;
-  --info-wash: 238 242 255;
+  /* Semantic status, tuned to glow on dark rather than sit on white */
+  --ok: 52 211 153;
+  --ok-deep: 16 185 129;
+  --warn: 251 191 36;
+  --warn-deep: 245 158 11;
+  --danger: 251 113 133;
+  --danger-deep: 244 63 94;
+  --info: 129 140 248;
+
+  /* Shadow stack for floating panels */
+  --shadow-glass: 0 8px 32px rgb(2 6 18 / 0.55), 0 2px 8px rgb(2 6 18 / 0.4);
+  --shadow-lift: 0 20px 48px rgb(2 6 18 / 0.7), 0 4px 12px rgb(2 6 18 / 0.5);
 }
 
 html {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
 }
 
 body {
-  background-color: rgb(var(--surface-page));
+  background-color: rgb(var(--canvas-base));
   color: rgb(var(--ink-body));
+  min-height: 100vh;
 }
+
+/* ------------------------------------------------------------- Aurora field */
+
+/*
+ * Three slow-drifting radial glows pinned behind the app. Fixed position and
+ * pointer-events:none so they never intercept a click or scroll with content.
+ */
+.aurora-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 15% 0%,
+      rgb(var(--brand) / 0.16),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 70% 55% at 85% 15%,
+      rgb(var(--accent-violet) / 0.13),
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse 90% 70% at 50% 100%,
+      rgb(var(--accent-cyan) / 0.09),
+      transparent 65%
+    );
+}
+
+.aurora-field::after {
+  /* A very faint grain so large flat areas do not band on cheap panels. */
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.28;
+  background-image: radial-gradient(
+    rgb(255 255 255 / 0.045) 0.5px,
+    transparent 0.5px
+  );
+  background-size: 3px 3px;
+}
+
+@keyframes aurora-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2%, -1.5%, 0) scale(1.06);
+  }
+}
+
+.aurora-drift {
+  animation: aurora-drift 26s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------------- Glass */
+
+/*
+ * The core material. An explicit dark background FIRST, then blur, then a
+ * 1px border, then an inset highlight along the top edge — that highlight is
+ * what makes the panel read as a physical pane catching light rather than as
+ * a flat translucent rectangle.
+ */
+.glass {
+  position: relative;
+  background-color: rgb(var(--glass-surface) / var(--glass-alpha));
+  /*
+   * The blur itself is applied with Tailwind's `backdrop-blur-glass`
+   * utility on the element, not declared here. Next's CSS pipeline strips a
+   * raw `backdrop-filter` from this rule, so declaring it here silently
+   * produced flat panels with no blur at all - the whole material failing
+   * open to something that merely looked slightly transparent.
+   */
+  border: 1px solid rgb(var(--glass-border) / var(--glass-border-alpha));
+  box-shadow:
+    var(--shadow-glass),
+    inset 0 1px 0 0 rgb(255 255 255 / 0.09);
+}
+
+.glass-raised {
+  background-color: rgb(var(--glass-surface) / var(--glass-alpha-raised));
+}
+
+/* Interactive glass: lifts and brightens under the pointer. */
+.glass-interactive {
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 260ms ease,
+    background-color 260ms ease;
+  will-change: transform;
+}
+
+.glass-interactive:hover {
+  transform: translateY(-3px) scale(1.008);
+  background-color: rgb(var(--glass-surface) / var(--glass-alpha-hover));
+  border-color: rgb(var(--glass-border) / var(--glass-border-alpha-hover));
+  box-shadow:
+    var(--shadow-lift),
+    inset 0 1px 0 0 rgb(255 255 255 / 0.14);
+}
+
+/*
+ * Sheen: a diagonal highlight that sweeps across on hover, the way light moves
+ * over real glass when you tilt it.
+ */
+.glass-sheen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgb(255 255 255 / 0.10) 48%,
+    rgb(255 255 255 / 0.03) 56%,
+    transparent 68%
+  );
+  background-size: 240% 100%;
+  background-position: 130% 0;
+  transition:
+    opacity 320ms ease,
+    background-position 760ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.glass-sheen:hover::before {
+  opacity: 1;
+  background-position: -30% 0;
+}
+
+/* A brand-tinted edge for the element that most wants attention on a screen. */
+.glass-accent {
+  border-color: rgb(var(--brand) / 0.34);
+  box-shadow:
+    var(--shadow-glass),
+    inset 0 1px 0 0 rgb(255 255 255 / 0.12),
+    0 0 28px -6px rgb(var(--brand) / 0.42);
+}
+
+.glass-accent:hover {
+  border-color: rgb(var(--brand) / 0.55);
+  box-shadow:
+    var(--shadow-lift),
+    inset 0 1px 0 0 rgb(255 255 255 / 0.16),
+    0 0 44px -6px rgb(var(--brand) / 0.55);
+}
+
+/* --------------------------------------------------------------- Typography */
 
 /* Money and any figure that must align in a column. */
 .tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
 }
 
-/* Monospace identifiers: correlation ids, payment ids, hashes. */
+/* Large monetary figures get a faint luminosity so they read as the hero. */
+.figure-glow {
+  text-shadow: 0 0 26px rgb(var(--brand) / 0.30);
+}
+
 .mono {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   font-size: 0.8125rem;
   letter-spacing: -0.01em;
 }
 
-/* Section eyebrow label. */
 .eyebrow {
   font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgb(var(--ink-muted));
 }
 
-/* Focus ring used across every interactive element. */
+/* Gradient display text, used sparingly — headline only. */
+.text-gradient {
+  background: linear-gradient(
+    120deg,
+    rgb(var(--ink-strong)) 12%,
+    rgb(var(--brand-bright)) 52%,
+    rgb(var(--accent-cyan)) 88%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* ----------------------------------------------------------------- Controls */
+
 .focusable:focus-visible {
-  outline: 2px solid rgb(var(--brand));
+  outline: 2px solid rgb(var(--brand-bright));
   outline-offset: 2px;
+  border-radius: 6px;
 }
 
-@keyframes eq-pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgb(var(--brand) / 0.45); }
-  70% { box-shadow: 0 0 0 10px rgb(var(--brand) / 0); }
-  100% { box-shadow: 0 0 0 0 rgb(var(--brand) / 0); }
+/* Buttons get a lift plus a glow that matches their intent colour. */
+.btn-lift {
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease;
 }
 
-.pulse-ring {
-  animation: eq-pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.btn-lift:hover:not(:disabled) {
+  transform: translateY(-2px);
 }
 
-@keyframes eq-fade-up {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+.btn-lift:active:not(:disabled) {
+  transform: translateY(0);
+  transition-duration: 60ms;
+}
+
+/* --------------------------------------------------------------- Animations */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .fade-up {
-  animation: eq-fade-up 0.28s ease-out both;
+  animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Stagger children so a grid assembles rather than snapping in. */
+.stagger > * {
+  animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger > *:nth-child(2) { animation-delay: 0.09s; }
+.stagger > *:nth-child(3) { animation-delay: 0.14s; }
+.stagger > *:nth-child(4) { animation-delay: 0.19s; }
+.stagger > *:nth-child(5) { animation-delay: 0.24s; }
+.stagger > *:nth-child(6) { animation-delay: 0.29s; }
+.stagger > *:nth-child(7) { animation-delay: 0.34s; }
+.stagger > *:nth-child(8) { animation-delay: 0.39s; }
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgb(var(--brand) / 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgb(var(--brand) / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(var(--brand) / 0);
+  }
+}
+
+.pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes status-breathe {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.62;
+    transform: scale(0.9);
+  }
+}
+
+.status-breathe {
+  animation: status-breathe 2.4s ease-in-out infinite;
+}
+
+/* A meter or bar filling from zero, so numbers feel measured rather than drawn. */
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.bar-grow {
+  transform-origin: left center;
+  animation: bar-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ------------------------------------------------------------------ Scroll */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--canvas-deep));
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 0.12);
+  border-radius: 6px;
+  border: 2px solid rgb(var(--canvas-deep));
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+
+/* Selection picks up the brand rather than the browser default. */
+::selection {
+  background: rgb(var(--brand) / 0.32);
+  color: rgb(var(--ink-strong));
+}
+
+/* -------------------------------------------------------- Reduced motion */
+
+/*
+ * Honour the preference completely. Everything above is decoration; none of it
+ * carries information that is lost by removing it.
+ */
 @media (prefers-reduced-motion: reduce) {
-  .pulse-ring,
-  .fade-up {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .glass-interactive:hover {
+    transform: none;
+  }
+
+  .btn-lift:hover:not(:disabled) {
+    transform: none;
   }
 }

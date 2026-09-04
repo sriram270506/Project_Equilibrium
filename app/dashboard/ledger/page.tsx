@@ -94,8 +94,8 @@ export default function TrialBalancePage() {
         className={cn(
           "mb-6",
           data.balanced
-            ? "border-ok/30 bg-ok-wash"
-            : "border-danger/40 bg-danger-wash"
+            ? "border-ok/30 bg-ok/[0.12]"
+            : "border-danger/40 bg-danger/[0.12]"
         )}
       >
         <CardBody>
@@ -199,7 +199,7 @@ export default function TrialBalancePage() {
                           ? "text-ink-muted"
                           : account.netPaise > 0
                             ? "text-ink-strong"
-                            : "text-brand-strong"
+                            : "text-brand-bright"
                       )}
                     >
                       <Money paise={account.netPaise} />

@@ -228,7 +228,7 @@ export default function ExceptionsPage() {
                       className={cn(
                         "px-4 py-3",
                         c.differencePaise
-                          ? "bg-danger-wash"
+                          ? "bg-danger/[0.12]"
                           : "bg-surface-card"
                       )}
                     >

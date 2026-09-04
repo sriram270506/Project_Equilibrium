@@ -385,7 +385,7 @@ export default function ModelCardPage() {
       ) : null}
 
       <div className="mt-6">
-        <Card tone="sunken">
+        <Card tone="raised">
           <CardBody>
             <p className="eyebrow mb-2">Calibration note</p>
             <p className="text-[14px] leading-relaxed text-ink-body">

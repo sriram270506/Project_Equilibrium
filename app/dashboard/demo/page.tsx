@@ -201,7 +201,7 @@ export default function GuidedDemoPage() {
                         "tabular mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold",
                         result && "bg-ok text-white",
                         !result && isRunning && "bg-brand text-white pulse-ring",
-                        !result && !isRunning && isNext && "bg-brand-wash text-brand-strong",
+                        !result && !isRunning && isNext && "bg-brand/[0.12] text-brand-bright",
                         !result && !isRunning && !isNext && "bg-surface-sunken text-ink-muted"
                       )}
                     >
@@ -267,8 +267,8 @@ export default function GuidedDemoPage() {
                             ))}
                           </div>
 
-                          <div className="rounded-md border-l-2 border-brand bg-brand-wash px-4 py-3">
-                            <p className="text-2xs font-semibold uppercase tracking-wider text-brand-strong">
+                          <div className="rounded-md border-l-2 border-brand bg-brand/[0.12] px-4 py-3">
+                            <p className="text-2xs font-semibold uppercase tracking-wider text-brand-bright">
                               Why this is hard
                             </p>
                             <p className="mt-1 text-[14px] leading-relaxed text-ink-body">
@@ -279,7 +279,7 @@ export default function GuidedDemoPage() {
                           {result.verifyAt ? (
                             <Link
                               href={result.verifyAt.href}
-                              className="focusable inline-flex items-center gap-1.5 text-[13px] font-medium text-brand-strong hover:underline"
+                              className="focusable inline-flex items-center gap-1.5 text-[13px] font-medium text-brand-bright hover:underline"
                             >
                               {result.verifyAt.label} →
                             </Link>
@@ -288,7 +288,7 @@ export default function GuidedDemoPage() {
                       ) : null}
 
                       {failed ? (
-                        <div className="mt-3 rounded-md border border-danger/30 bg-danger-wash px-4 py-3 text-[13px] text-ink-body">
+                        <div className="mt-3 rounded-md border border-danger/30 bg-danger/[0.12] px-4 py-3 text-[13px] text-ink-body">
                           <p className="font-semibold text-danger">
                             This step could not run
                           </p>
@@ -306,7 +306,7 @@ export default function GuidedDemoPage() {
 
       {allDone ? (
         <div className="fade-up mt-6">
-          <Card className="border-ok/30 bg-ok-wash">
+          <Card className="border-ok/30 bg-ok/[0.12]">
             <CardHeader
               title="That is the whole system"
               hint="Two suppliers were paid early, the provider failed twice, and the ledger still balances to the paisa."
@@ -314,7 +314,7 @@ export default function GuidedDemoPage() {
             <CardBody className="flex flex-wrap gap-3">
               <Link
                 href="/dashboard/ledger"
-                className="focusable rounded-md bg-brand px-4 py-2 text-[13px] font-semibold text-white hover:bg-brand-strong"
+                className="focusable rounded-md bg-brand-deep px-4 py-2 text-[13px] font-semibold text-white hover:bg-brand"
               >
                 Verify the trial balance
               </Link>

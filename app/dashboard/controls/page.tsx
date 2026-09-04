@@ -185,7 +185,7 @@ export default function ControlsPage() {
         className={cn(
           "mb-4",
           limits.killSwitchEngaged
-            ? "border-danger/40 bg-danger-wash"
+            ? "border-danger/40 bg-danger/[0.12]"
             : "border-line-soft"
         )}
       >
@@ -324,8 +324,8 @@ export default function ControlsPage() {
               className={cn(
                 "flex items-center gap-3 rounded-md border px-4 py-3",
                 audit.verification.valid
-                  ? "border-ok/30 bg-ok-wash"
-                  : "border-danger/30 bg-danger-wash"
+                  ? "border-ok/30 bg-ok/[0.12]"
+                  : "border-danger/30 bg-danger/[0.12]"
               )}
             >
               <span

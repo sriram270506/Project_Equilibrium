@@ -11,42 +11,67 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        surface: {
-          page: token("surface-page"),
-          card: token("surface-card"),
-          sunken: token("surface-sunken"),
-          inverse: token("surface-inverse"),
+        canvas: {
+          DEFAULT: token("canvas-base"),
+          deep: token("canvas-deep"),
+          raised: token("canvas-raised"),
         },
         ink: {
           strong: token("ink-strong"),
           body: token("ink-body"),
           muted: token("ink-muted"),
+          faint: token("ink-faint"),
           inverse: token("ink-inverse"),
         },
-        line: {
-          soft: token("line-soft"),
-          strong: token("line-strong"),
-        },
         brand: {
-          ink: token("brand-ink"),
           DEFAULT: token("brand"),
-          strong: token("brand-strong"),
-          wash: token("brand-wash"),
+          bright: token("brand-bright"),
+          deep: token("brand-deep"),
         },
-        ok: { DEFAULT: token("ok"), wash: token("ok-wash") },
-        warn: { DEFAULT: token("warn"), wash: token("warn-wash") },
-        danger: { DEFAULT: token("danger"), wash: token("danger-wash") },
-        info: { DEFAULT: token("info"), wash: token("info-wash") },
+        cyanAccent: token("accent-cyan"),
+        violetAccent: token("accent-violet"),
+        ok: { DEFAULT: token("ok"), deep: token("ok-deep") },
+        warn: { DEFAULT: token("warn"), deep: token("warn-deep") },
+        danger: { DEFAULT: token("danger"), deep: token("danger-deep") },
+        info: token("info"),
+
+        /*
+         * Legacy aliases. The previous light theme used `surface-*` and
+         * `line-*`; mapping them onto the new tokens means every existing page
+         * renders correctly on the dark canvas without a rewrite, and any
+         * stragglers degrade to a sensible glass surface rather than to white.
+         */
+        surface: {
+          page: token("canvas-base"),
+          card: "rgb(255 255 255 / 0.045)",
+          sunken: "rgb(255 255 255 / 0.03)",
+          inverse: token("canvas-deep"),
+        },
+        line: {
+          soft: "rgb(255 255 255 / 0.09)",
+          strong: "rgb(255 255 255 / 0.16)",
+        },
       },
       fontSize: {
         "2xs": ["0.6875rem", { lineHeight: "1rem" }],
       },
       boxShadow: {
-        card: "0 1px 2px rgb(12 18 38 / 0.04), 0 1px 3px rgb(12 18 38 / 0.06)",
-        lift: "0 4px 12px rgb(12 18 38 / 0.08), 0 1px 3px rgb(12 18 38 / 0.06)",
+        glass: "0 8px 32px rgb(2 6 18 / 0.55), 0 2px 8px rgb(2 6 18 / 0.4)",
+        lift: "0 20px 48px rgb(2 6 18 / 0.7), 0 4px 12px rgb(2 6 18 / 0.5)",
+        "glow-brand": "0 0 32px -6px rgb(var(--brand) / 0.55)",
+        "glow-ok": "0 0 28px -6px rgb(var(--ok) / 0.5)",
+        "glow-warn": "0 0 28px -6px rgb(var(--warn) / 0.5)",
+        "glow-danger": "0 0 28px -6px rgb(var(--danger) / 0.5)",
       },
       borderRadius: {
-        card: "0.625rem",
+        card: "0.875rem",
+        panel: "1.25rem",
+      },
+      backdropBlur: {
+        glass: "20px",
+      },
+      transitionTimingFunction: {
+        spring: "cubic-bezier(0.22, 1, 0.36, 1)",
       },
     },
   },

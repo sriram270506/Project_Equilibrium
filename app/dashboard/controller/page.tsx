@@ -47,7 +47,7 @@ export default function ControllerPage() {
 
       {result ? (
         <div className="space-y-6">
-          <Card tone={result.status === "STOPPED" ? "sunken" : "default"}>
+          <Card tone={result.status === "STOPPED" ? "raised" : "default"}>
             <CardHeader title={result.recommendation} eyebrow={result.status} hint={result.stopReason ? `Stopped because: ${result.stopReason}` : "Human approval is still required before any payment action."} />
             <CardBody><p className="text-xs text-ink-muted">Trace {result.traceId}</p></CardBody>
           </Card>

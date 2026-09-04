@@ -1,25 +1,40 @@
 import { ReactNode, ButtonHTMLAttributes } from "react";
 import { cn } from "@/src/lib/utils";
 
+/**
+ * Shared UI primitives.
+ *
+ * Every screen renders through these, which is what lets the whole console
+ * change material without rewriting fifteen pages. Glass treatment, hover
+ * physics, and contrast rules live here rather than being reinvented per page.
+ */
+
 /* ------------------------------------------------------------------ Card */
 
 export function Card({
   className,
   children,
   tone = "default",
+  interactive = true,
 }: {
   className?: string;
   children: ReactNode;
-  tone?: "default" | "sunken" | "inverse";
+  tone?: "default" | "raised" | "accent" | "flat";
+  /** Lift and brighten under the pointer. Off for purely static containers. */
+  interactive?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "rounded-card border shadow-card",
-        tone === "default" && "border-line-soft bg-surface-card",
-        tone === "sunken" && "border-line-soft bg-surface-sunken",
-        tone === "inverse" &&
-          "border-transparent bg-surface-inverse text-ink-inverse",
+        "rounded-card",
+        // Blur via Tailwind utilities: a raw backdrop-filter in globals.css is
+        // stripped by the build, which left every panel unblurred.
+        tone !== "flat" && "glass backdrop-blur-glass backdrop-saturate-150",
+        tone === "raised" && "glass-raised",
+        tone === "accent" && "glass-accent",
+        tone === "flat" &&
+          "border border-white/[0.07] bg-white/[0.02] rounded-card",
+        interactive && tone !== "flat" && "glass-interactive glass-sheen",
         className
       )}
     >
@@ -40,11 +55,17 @@ export function CardHeader({
   eyebrow?: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-line-soft px-5 py-4">
+    <div className="flex items-start justify-between gap-4 border-b border-white/[0.07] px-5 py-4">
       <div className="min-w-0">
-        {eyebrow ? <p className="eyebrow mb-1">{eyebrow}</p> : null}
-        <h2 className="text-base font-semibold text-ink-strong">{title}</h2>
-        {hint ? <p className="mt-1 text-sm text-ink-muted">{hint}</p> : null}
+        {eyebrow ? <p className="eyebrow mb-1.5">{eyebrow}</p> : null}
+        <h2 className="text-[15px] font-semibold tracking-tight text-ink-strong">
+          {title}
+        </h2>
+        {hint ? (
+          <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">
+            {hint}
+          </p>
+        ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
@@ -73,13 +94,13 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="mb-6 flex items-start justify-between gap-6">
+    <header className="fade-up mb-7 flex items-start justify-between gap-6">
       <div className="max-w-3xl">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink-strong">
+        <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-ink-strong">
           {title}
         </h1>
         {lede ? (
-          <p className="mt-2 text-[15px] leading-relaxed text-ink-body">
+          <p className="mt-2.5 text-[15px] leading-relaxed text-ink-muted">
             {lede}
           </p>
         ) : null}
@@ -109,22 +130,36 @@ export function Stat({
     ok: "text-ok",
     warn: "text-warn",
     danger: "text-danger",
-    brand: "text-brand-strong",
+    brand: "text-brand-bright",
+  }[tone];
+
+  const glow = {
+    neutral: "",
+    ok: "shadow-glow-ok",
+    warn: "shadow-glow-warn",
+    danger: "shadow-glow-danger",
+    brand: "shadow-glow-brand",
   }[tone];
 
   return (
-    <Card className={cn("p-5", emphasis && "ring-1 ring-brand/25")}>
-      <p className="text-[13px] font-medium text-ink-muted">{label}</p>
+    <Card
+      tone={emphasis ? "accent" : "default"}
+      className={cn("group p-5", emphasis && glow)}
+    >
+      <p className="text-[12px] font-medium uppercase tracking-wider text-ink-muted">
+        {label}
+      </p>
       <p
         className={cn(
-          "tabular mt-2 text-[28px] font-semibold leading-none",
-          valueTone
+          "tabular mt-2.5 text-[30px] font-semibold leading-none transition-transform duration-300 ease-spring group-hover:scale-[1.03] group-hover:origin-left",
+          valueTone,
+          tone === "brand" && "figure-glow"
         )}
       >
         {value}
       </p>
       {hint ? (
-        <p className="mt-2 text-[13px] leading-snug text-ink-muted">{hint}</p>
+        <p className="mt-2.5 text-[13px] leading-snug text-ink-faint">{hint}</p>
       ) : null}
     </Card>
   );
@@ -136,13 +171,15 @@ type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const buttonVariants: Record<ButtonVariant, string> = {
   primary:
-    "bg-brand text-white hover:bg-brand-strong border-transparent shadow-card",
+    // Both stops are dark enough for white text at 13px. The brighter blue
+  // looked better and measured 2.5:1 against white, well under the 4.5:1 floor.
+  "bg-gradient-to-b from-brand-deep to-[rgb(29_78_216)] text-white border-white/25 shadow-glow-brand hover:shadow-[0_0_40px_-6px_rgb(var(--brand)/0.7)] hover:from-brand hover:to-brand-deep",
   secondary:
-    "bg-surface-card text-ink-strong hover:bg-surface-sunken border-line-strong",
+    "bg-white/[0.06] text-ink-strong border-white/[0.14] hover:bg-white/[0.11] hover:border-white/25",
   ghost:
-    "bg-transparent text-ink-body hover:bg-surface-sunken border-transparent",
+    "bg-transparent text-ink-muted border-transparent hover:bg-white/[0.07] hover:text-ink-strong",
   danger:
-    "bg-danger text-white hover:brightness-95 border-transparent shadow-card",
+    "bg-gradient-to-b from-danger to-danger-deep text-white border-white/20 shadow-glow-danger",
 };
 
 export function Button({
@@ -158,9 +195,9 @@ export function Button({
   return (
     <button
       className={cn(
-        "focusable inline-flex items-center justify-center gap-2 rounded-md border font-medium transition-colors",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        size === "sm" ? "px-3 py-1.5 text-[13px]" : "px-4 py-2 text-sm",
+        "focusable btn-lift inline-flex items-center justify-center gap-2 rounded-lg border font-medium backdrop-blur-sm",
+        "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0",
+        size === "sm" ? "px-3.5 py-1.5 text-[13px]" : "px-4.5 py-2.5 text-sm",
         buttonVariants[variant],
         className
       )}
@@ -216,16 +253,31 @@ export function Callout({
   icon?: ReactNode;
 }) {
   const tones = {
-    info: "border-info/25 bg-info-wash",
-    ok: "border-ok/25 bg-ok-wash",
-    warn: "border-warn/30 bg-warn-wash",
-    danger: "border-danger/25 bg-danger-wash",
-    brand: "border-brand/25 bg-brand-wash",
+    info: "border-info/30 bg-info/[0.09]",
+    ok: "border-ok/30 bg-ok/[0.09]",
+    warn: "border-warn/30 bg-warn/[0.09]",
+    danger: "border-danger/30 bg-danger/[0.09]",
+    brand: "border-brand/35 bg-brand/[0.10]",
+  }[tone];
+
+  const bar = {
+    info: "bg-info",
+    ok: "bg-ok",
+    warn: "bg-warn",
+    danger: "bg-danger",
+    brand: "bg-brand",
   }[tone];
 
   return (
-    <div className={cn("rounded-card border p-4 text-ink-body", tones)}>
-      <div className="flex gap-3">
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-card border px-4 py-3.5 text-ink-body backdrop-blur-xl",
+        tones
+      )}
+    >
+      {/* A lit edge on the left, so intent is readable before the text is. */}
+      <span className={cn("absolute inset-y-0 left-0 w-[3px]", bar)} />
+      <div className="flex gap-3 pl-1">
         {icon ? <div className="mt-0.5 shrink-0">{icon}</div> : null}
         <div className="min-w-0 text-sm leading-relaxed">
           {title ? (
@@ -242,10 +294,15 @@ export function Callout({
 
 export function LoadingState({ label = "Loading" }: { label?: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-card border border-line-soft bg-surface-card px-5 py-8 text-sm text-ink-muted">
-      <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-brand" />
-      {label}
-    </div>
+    <Card interactive={false} className="px-5 py-10">
+      <div className="flex items-center justify-center gap-3 text-sm text-ink-muted">
+        <span className="relative flex h-3 w-3">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-70" />
+          <span className="relative inline-flex h-3 w-3 rounded-full bg-brand-bright" />
+        </span>
+        {label}…
+      </div>
+    </Card>
   );
 }
 
@@ -278,7 +335,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <Card className="px-5 py-10 text-center">
+    <Card interactive={false} className="px-5 py-12 text-center">
       <p className="text-sm font-semibold text-ink-strong">{title}</p>
       {children ? (
         <div className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-muted">
@@ -310,7 +367,7 @@ export function Th({
   return (
     <th
       className={cn(
-        "border-b border-line-strong px-4 py-2.5 text-2xs font-semibold uppercase tracking-wider text-ink-muted",
+        "border-b border-white/[0.12] px-4 py-3 text-2xs font-semibold uppercase tracking-wider text-ink-muted",
         align === "right" ? "text-right" : "text-left"
       )}
     >
@@ -331,13 +388,33 @@ export function Td({
   return (
     <td
       className={cn(
-        "border-b border-line-soft px-4 py-3 text-ink-body",
+        "border-b border-white/[0.05] px-4 py-3 text-ink-body",
         align === "right" ? "text-right" : "text-left",
         className
       )}
     >
       {children}
     </td>
+  );
+}
+
+/** Table row with a hover wash, for rows that link somewhere. */
+export function Tr({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <tr
+      className={cn(
+        "transition-colors duration-200 hover:bg-white/[0.045]",
+        className
+      )}
+    >
+      {children}
+    </tr>
   );
 }
 
@@ -353,10 +430,10 @@ export function DataRow({
   hint?: string;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-line-soft py-2.5 last:border-0">
+    <div className="flex items-baseline justify-between gap-4 border-b border-white/[0.06] py-2.5 last:border-0">
       <div>
         <span className="text-[13px] text-ink-muted">{label}</span>
-        {hint ? <p className="text-2xs text-ink-muted/80">{hint}</p> : null}
+        {hint ? <p className="text-2xs text-ink-faint">{hint}</p> : null}
       </div>
       <span className="text-right text-sm font-medium text-ink-strong">
         {children}
@@ -382,7 +459,13 @@ export function MonoId({
       ? `${value.slice(0, truncate)}…`
       : value;
   return (
-    <span className={cn("mono text-ink-muted", className)} title={value}>
+    <span
+      className={cn(
+        "mono rounded bg-white/[0.05] px-1.5 py-0.5 text-ink-muted",
+        className
+      )}
+      title={value}
+    >
       {shown}
     </span>
   );

@@ -133,7 +133,7 @@ export default function OfferDetailPage({
     <div className="fade-up max-w-5xl">
       <Link
         href="/dashboard/opportunities"
-        className="focusable mb-3 inline-flex text-[13px] font-medium text-brand-strong hover:underline"
+        className="focusable mb-3 inline-flex text-[13px] font-medium text-brand-bright hover:underline"
       >
         ← All suppliers at risk
       </Link>
@@ -257,7 +257,7 @@ export default function OfferDetailPage({
               action={
                 <Link
                   href={`/dashboard/payments/${data.payment.id}`}
-                  className="focusable text-[13px] font-medium text-brand-strong hover:underline"
+                  className="focusable text-[13px] font-medium text-brand-bright hover:underline"
                 >
                   Trace it →
                 </Link>

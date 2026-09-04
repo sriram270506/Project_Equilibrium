@@ -47,15 +47,15 @@ export default function PaymentsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "CONFIRMED":
-        return "bg-emerald-100 text-emerald-900";
+        return "bg-ok/[0.14] text-ok";
       case "UNKNOWN":
-        return "bg-amber-100 text-amber-900";
+        return "bg-warn/[0.14] text-warn";
       case "FAILED":
-        return "bg-red-100 text-red-900";
+        return "bg-red-100 text-danger";
       case "SUBMITTED":
-        return "bg-blue-100 text-blue-900";
+        return "bg-blue-100 text-brand-bright";
       default:
-        return "bg-slate-100 text-slate-900";
+        return "bg-white/[0.06] text-ink-strong";
     }
   };
 
@@ -68,33 +68,33 @@ export default function PaymentsPage() {
       <h1 className="text-3xl font-bold mb-8">Payment Operations</h1>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-red-800">
+        <div className="bg-danger/[0.10] border border-danger/30 rounded-lg p-4 mb-6 text-danger">
           {error}
         </div>
       )}
 
       {payments.length === 0 ? (
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-12 text-center">
-          <p className="text-slate-600">No payments found</p>
+        <div className="bg-white/[0.03] border border-white/[0.1] rounded-lg p-12 text-center">
+          <p className="text-ink-muted">No payments found</p>
         </div>
       ) : (
         <div className="space-y-4">
           {payments.map((payment) => (
             <div
               key={payment.id}
-              className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
+              className="glass backdrop-blur-glass rounded-card p-6 hover:shadow-lg transition-shadow"
             >
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h2 className="text-lg font-semibold">
                     {payment.supplierName}
                   </h2>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-ink-muted">
                     Ref: {payment.internalReference}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-emerald-600">
+                  <p className="text-2xl font-bold text-ok">
                     {formatPaise(payment.amountPaise)}
                   </p>
                   <span className={`inline-block mt-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(payment.status)}`}>
@@ -105,11 +105,11 @@ export default function PaymentsPage() {
 
               <div className="grid grid-cols-4 gap-4 mb-4 text-sm">
                 <div>
-                  <p className="text-slate-700 font-medium">Provider</p>
+                  <p className="text-ink-body font-medium">Provider</p>
                   <p className="font-semibold">{payment.provider}</p>
                 </div>
                 <div>
-                  <p className="text-slate-700 font-medium">Provider ID</p>
+                  <p className="text-ink-body font-medium">Provider ID</p>
                   <p className="font-mono text-xs">
                     {payment.providerPaymentId
                       ? payment.providerPaymentId.slice(0, 20) + "..."
@@ -117,13 +117,13 @@ export default function PaymentsPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-700 font-medium">Correlation ID</p>
+                  <p className="text-ink-body font-medium">Correlation ID</p>
                   <p className="font-mono text-xs">
                     {payment.correlationId.slice(0, 20)}...
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-700 font-medium">Created</p>
+                  <p className="text-ink-body font-medium">Created</p>
                   <p>
                     {new Date(payment.createdAt).toLocaleDateString("en-IN")}
                   </p>
@@ -132,7 +132,7 @@ export default function PaymentsPage() {
 
               <Link
                 href={`/dashboard/payments/${payment.id}`}
-                className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="inline-block px-4 py-2 bg-brand text-white rounded-md hover:bg-brand-deep transition-colors"
               >
                 View Timeline →
               </Link>

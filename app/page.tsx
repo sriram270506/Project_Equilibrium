@@ -18,9 +18,11 @@ const EXAMPLE_DEAL = computeDealEconomics({
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-surface-page">
+    <main className="relative min-h-screen">
+      <div className="aurora-field aurora-drift" aria-hidden="true" />
+      <div className="relative z-10">
       {/* ------------------------------------------------------------- Hero */}
-      <section className="border-b border-line-soft bg-surface-inverse">
+      <section className="border-b border-white/[0.07]">
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
           <p className="eyebrow text-brand">
             Marketplace working capital · Buildathon prototype
@@ -28,16 +30,16 @@ export default function LandingPage() {
 
           <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
             Small suppliers go broke waiting to get paid.
-            <span className="block text-brand"> Not because they lack revenue.</span>
+            <span className="text-gradient block"> Not because they lack revenue.</span>
           </h1>
 
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-300">
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-muted">
             A supplier delivers goods on Monday and gets paid 30 days later.
             Payroll is on Friday. That gap kills otherwise-healthy businesses —
             and it is the single largest cause of MSME failure in India.
           </p>
 
-          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-300">
+          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-ink-muted">
             <strong className="font-semibold text-white">Equilibrium</strong>{" "}
             predicts which suppliers are about to run short, offers them their
             own money early at a fair price, and then moves that money with the
@@ -47,13 +49,13 @@ export default function LandingPage() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/dashboard/demo"
-              className="focusable rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-strong"
+              className="focusable btn-lift rounded-lg border border-white/20 bg-gradient-to-b from-brand-deep to-[rgb(29_78_216)] px-5 py-2.5 text-sm font-semibold text-white shadow-glow-brand"
             >
               Run the 5-minute demo
             </Link>
             <Link
               href="/dashboard"
-              className="focusable rounded-md border border-slate-600 px-5 py-2.5 text-sm font-semibold text-slate-200 transition-colors hover:bg-slate-800"
+              className="focusable btn-lift rounded-lg border border-white/[0.16] bg-white/[0.06] px-5 py-2.5 text-sm font-semibold text-ink-strong backdrop-blur-md transition-colors hover:bg-white/[0.12]"
             >
               Open the operations console
             </Link>
@@ -105,7 +107,7 @@ export default function LandingPage() {
       </section>
 
       {/* --------------------------------------------------- The hard part */}
-      <section className="border-y border-line-soft bg-surface-card">
+      <section className="border-y border-white/[0.07] bg-white/[0.02] backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-6 py-14">
           <p className="eyebrow">Why this is not a spreadsheet</p>
           <h2 className="mt-2 max-w-3xl text-2xl font-semibold tracking-tight text-ink-strong">
@@ -159,9 +161,9 @@ export default function LandingPage() {
           {FLOW.map((step, i) => (
             <li
               key={step.title}
-              className="flex gap-4 rounded-card border border-line-soft bg-surface-card p-4 shadow-card"
+              className="glass glass-interactive glass-sheen flex gap-4 rounded-card p-4 backdrop-blur-glass backdrop-saturate-150"
             >
-              <span className="tabular flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-wash text-sm font-semibold text-brand-strong">
+              <span className="tabular flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand/40 bg-brand/[0.16] text-sm font-semibold text-brand-bright">
                 {i + 1}
               </span>
               <div>
@@ -179,7 +181,7 @@ export default function LandingPage() {
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             href="/dashboard/demo"
-            className="focusable rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-strong"
+            className="focusable rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-deep"
           >
             Watch it run
           </Link>
@@ -193,7 +195,7 @@ export default function LandingPage() {
       </section>
 
       {/* ---------------------------------------------------------- Footer */}
-      <footer className="border-t border-line-soft bg-surface-card">
+      <footer className="border-t border-white/[0.07] bg-white/[0.02] backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-6 py-8">
           <p className="text-[13px] leading-relaxed text-ink-muted">
             Demo build. Runs entirely on synthetic data against a mock payment
@@ -203,6 +205,7 @@ export default function LandingPage() {
           </p>
         </div>
       </footer>
+      </div>
     </main>
   );
 }
@@ -246,20 +249,22 @@ function ExampleStat({
   tone: "danger" | "ok" | "brand";
 }) {
   const toneClasses = {
-    danger: "border-danger/25 bg-danger-wash",
-    ok: "border-ok/25 bg-ok-wash",
-    brand: "border-brand/25 bg-brand-wash",
+    danger: "border-danger/30 bg-danger/[0.10] shadow-glow-danger",
+    ok: "border-ok/30 bg-ok/[0.10] shadow-glow-ok",
+    brand: "border-brand/35 bg-brand/[0.12] shadow-glow-brand",
   }[tone];
 
   const headlineTone = {
     danger: "text-danger",
     ok: "text-ok",
-    brand: "text-brand-strong",
+    brand: "text-brand-bright",
   }[tone];
 
   return (
-    <div className={`rounded-card border p-5 ${toneClasses}`}>
-      <p className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
+    <div
+      className={`glass-interactive glass-sheen relative overflow-hidden rounded-card border p-5 backdrop-blur-xl ${toneClasses}`}
+    >
+      <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
         {step}
       </p>
       <p className={`mt-2 text-xl font-semibold ${headlineTone}`}>{headline}</p>
@@ -272,7 +277,7 @@ function Guarantee({ title, body }: { title: string; body: string }) {
   return (
     <div>
       <h3 className="flex items-baseline gap-2 text-sm font-semibold text-ink-strong">
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-bright shadow-glow-brand" />
         {title}
       </h3>
       <p className="mt-1.5 pl-3.5 text-[14px] leading-relaxed text-ink-body">

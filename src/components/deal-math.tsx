@@ -52,7 +52,7 @@ export function DealMathCard({
           <div className="mt-2 flex justify-between">
             <div>
               <p className="text-2xs text-ink-muted">Paid today</p>
-              <p className="tabular text-xl font-semibold text-brand-strong">
+              <p className="tabular text-xl font-semibold text-brand-bright">
                 <Money paise={deal.supplierReceivesPaise} />
               </p>
             </div>
@@ -99,7 +99,7 @@ export function DealMathCard({
           <div
             className={cn(
               "rounded-md border p-3",
-              fair ? "border-ok/30 bg-ok-wash" : "border-danger/30 bg-danger-wash"
+              fair ? "border-ok/30 bg-ok/[0.12]" : "border-danger/30 bg-danger/[0.12]"
             )}
           >
             <p className="text-2xs font-medium text-ink-muted">

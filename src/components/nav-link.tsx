@@ -26,22 +26,26 @@ export function NavLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "focusable block rounded-md px-2 py-1.5 transition-colors",
+        "focusable group relative block rounded-lg px-2.5 py-2 transition-all duration-200 ease-spring",
         active
-          ? "bg-brand/15 text-white"
-          : "text-slate-300 hover:bg-slate-800 hover:text-white"
+          ? "bg-brand/[0.16] text-ink-strong shadow-[inset_0_1px_0_0_rgb(255_255_255/0.08)]"
+          : "text-ink-muted hover:translate-x-0.5 hover:bg-white/[0.06] hover:text-ink-strong"
       )}
     >
+      {/* A lit rail on the active item, so position is readable peripherally. */}
+      {active ? (
+        <span className="absolute inset-y-1.5 left-0 w-[2px] rounded-full bg-gradient-to-b from-brand-bright to-cyanAccent shadow-glow-brand" />
+      ) : null}
       <span className="flex items-center gap-2 text-[13px] font-medium">
         {active ? (
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-bright shadow-glow-brand" />
         ) : (
-          <span className="h-1.5 w-1.5 shrink-0" />
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-white/[0.14] transition-colors duration-200 group-hover:bg-white/30" />
         )}
         {label}
       </span>
       {hint ? (
-        <span className="mt-0.5 block pl-3.5 text-2xs leading-snug text-slate-500">
+        <span className="mt-0.5 block pl-3.5 text-2xs leading-snug text-ink-faint">
           {hint}
         </span>
       ) : null}

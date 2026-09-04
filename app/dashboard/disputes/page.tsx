@@ -212,7 +212,7 @@ export default function DisputesPage() {
                     {draft ? (
                       <div className="fade-up space-y-3">
                         {draft.validationErrors.length > 0 ? (
-                          <div className="rounded-md border border-warn/30 bg-warn-wash px-4 py-3">
+                          <div className="rounded-md border border-warn/30 bg-warn/[0.12] px-4 py-3">
                             <p className="text-[13px] font-semibold text-ink-strong">
                               Held for review
                             </p>

@@ -4,8 +4,8 @@ export default function ScopePage() {
       <h1 className="text-3xl font-bold mb-8">Scope & Controls</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-emerald-900 mb-3">✓ Demonstrated</h2>
+        <div className="bg-ok/[0.10] border border-ok/30 rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-ok mb-3">✓ Demonstrated</h2>
           <ul className="text-sm text-emerald-800 space-y-2">
             <li>• ML-assisted liquidity prediction (logistic model)</li>
             <li>• Economic policy evaluation with hard caps</li>
@@ -21,8 +21,8 @@ export default function ScopePage() {
           </ul>
         </div>
 
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-amber-900 mb-3">⏳ Designed Not Implemented</h2>
+        <div className="bg-warn/[0.10] border border-warn/30 rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-warn mb-3">⏳ Designed Not Implemented</h2>
           <ul className="text-sm text-amber-800 space-y-2">
             <li>• Full Account Aggregator integration</li>
             <li>• Live Razorpay adapter (test mode only)</li>
@@ -37,9 +37,9 @@ export default function ScopePage() {
           </ul>
         </div>
 
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-3">🚫 Out of Scope</h2>
-          <ul className="text-sm text-slate-700 space-y-2">
+        <div className="bg-white/[0.03] border border-white/[0.1] rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-ink-strong mb-3">🚫 Out of Scope</h2>
+          <ul className="text-sm text-ink-body space-y-2">
             <li>• Production PCI-DSS compliance</li>
             <li>• DPDP (India Privacy Law) certification</li>
             <li>• Account Aggregator certification</li>
@@ -54,15 +54,15 @@ export default function ScopePage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-8 mb-8">
+      <div className="glass backdrop-blur-glass rounded-card p-8 mb-8">
         <h2 className="text-2xl font-bold mb-6">Architecture Principles</h2>
         
         <div className="space-y-8">
           <section>
-            <h3 className="text-lg font-semibold text-slate-900 mb-3">
+            <h3 className="text-lg font-semibold text-ink-strong mb-3">
               Single Source of Truth
             </h3>
-            <ul className="text-slate-700 space-y-2">
+            <ul className="text-ink-body space-y-2">
               <li>
                 <strong>Razorpay/Provider:</strong> Authoritative for live payment state
               </li>
@@ -76,10 +76,10 @@ export default function ScopePage() {
           </section>
 
           <section>
-            <h3 className="text-lg font-semibold text-slate-900 mb-3">
+            <h3 className="text-lg font-semibold text-ink-strong mb-3">
               Financial Correctness Rules
             </h3>
-            <ul className="text-slate-700 space-y-2">
+            <ul className="text-ink-body space-y-2">
               <li>✓ All monetary amounts are integer paise (no floats)</li>
               <li>✓ Every debit has a corresponding credit (double-entry)</li>
               <li>✓ Ledger entries are append-only, never updated</li>
@@ -90,10 +90,10 @@ export default function ScopePage() {
           </section>
 
           <section>
-            <h3 className="text-lg font-semibold text-slate-900 mb-3">
+            <h3 className="text-lg font-semibold text-ink-strong mb-3">
               Resilience Patterns
             </h3>
-            <ul className="text-slate-700 space-y-2">
+            <ul className="text-ink-body space-y-2">
               <li>• <strong>Timeout After Remote Success:</strong> Payment confirmed at provider but timed out locally → UNKNOWN → Reconciliation repairs</li>
               <li>• <strong>Duplicate Webhook:</strong> Webhook re-sent or duplicated → Idempotency key prevents double booking</li>
               <li>• <strong>Missing Internal Record:</strong> Reconciliation detects orphaned provider payment</li>
@@ -102,13 +102,13 @@ export default function ScopePage() {
           </section>
 
           <section>
-            <h3 className="text-lg font-semibold text-slate-900 mb-3">
+            <h3 className="text-lg font-semibold text-ink-strong mb-3">
               Demo Data
             </h3>
-            <p className="text-slate-700 mb-3">
+            <p className="text-ink-body mb-3">
               All data is synthetic Indian marketplace suppliers. No real people, real bank accounts, or production credentials.
             </p>
-            <ul className="text-slate-700 space-y-2">
+            <ul className="text-ink-body space-y-2">
               <li>• 6 suppliers with varying risk tiers</li>
               <li>• 30 days of liquidity observations</li>
               <li>• 2 opportunity examples (recommended & approved)</li>
@@ -119,9 +119,9 @@ export default function ScopePage() {
         </div>
       </div>
 
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-red-900 mb-3">⚠️ Important Disclaimer</h2>
-        <p className="text-sm text-red-800">
+      <div className="bg-danger/[0.10] border border-danger/30 rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-danger mb-3">⚠️ Important Disclaimer</h2>
+        <p className="text-sm text-danger">
           This is a <strong>Razorpay Buildathon prototype</strong> for demonstration purposes only.
           It is <strong>not production-ready</strong> and does not meet compliance requirements for real financial operations.
           Do not use with real customer data, real payments, or in production environments.

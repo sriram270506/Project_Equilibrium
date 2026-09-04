@@ -4,12 +4,22 @@ import { cn } from "@/src/lib/utils";
 type Tone = "neutral" | "ok" | "warn" | "danger" | "info" | "brand";
 
 const toneClasses: Record<Tone, string> = {
-  neutral: "bg-surface-sunken text-ink-body border-line-strong",
-  ok: "bg-ok-wash text-ok border-ok/30",
-  warn: "bg-warn-wash text-warn border-warn/30",
-  danger: "bg-danger-wash text-danger border-danger/30",
-  info: "bg-info-wash text-info border-info/30",
-  brand: "bg-brand-wash text-brand-strong border-brand/30",
+  neutral: "bg-white/[0.07] text-ink-body border-white/[0.14]",
+  ok: "bg-ok/[0.14] text-ok border-ok/35",
+  warn: "bg-warn/[0.14] text-warn border-warn/35",
+  danger: "bg-danger/[0.14] text-danger border-danger/35",
+  info: "bg-info/[0.14] text-info border-info/35",
+  brand: "bg-brand/[0.16] text-brand-bright border-brand/40",
+};
+
+/** A matching glow, so severity is legible at a glance across a dense table. */
+const toneGlow: Record<Tone, string> = {
+  neutral: "",
+  ok: "shadow-[0_0_16px_-4px_rgb(var(--ok)/0.6)]",
+  warn: "shadow-[0_0_16px_-4px_rgb(var(--warn)/0.6)]",
+  danger: "shadow-[0_0_16px_-4px_rgb(var(--danger)/0.6)]",
+  info: "shadow-[0_0_16px_-4px_rgb(var(--info)/0.6)]",
+  brand: "shadow-[0_0_16px_-4px_rgb(var(--brand)/0.6)]",
 };
 
 /**
@@ -188,9 +198,11 @@ export function StatusChip({
     <span
       title={entry?.meaning}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border font-medium whitespace-nowrap",
-        size === "sm" ? "px-2 py-0.5 text-2xs" : "px-2.5 py-1 text-xs",
+        "inline-flex items-center gap-1.5 rounded-full border font-medium whitespace-nowrap backdrop-blur-md",
+        "transition-transform duration-200 ease-spring hover:scale-105",
+        size === "sm" ? "px-2.5 py-0.5 text-2xs" : "px-3 py-1 text-xs",
         toneClasses[tone],
+        toneGlow[tone],
         className
       )}
     >
@@ -198,6 +210,11 @@ export function StatusChip({
         <span
           className={cn(
             "h-1.5 w-1.5 rounded-full",
+            (status === "SUBMITTED" ||
+              status === "UNKNOWN" ||
+              status === "PENDING_APPROVAL" ||
+              status === "INVESTIGATING") &&
+              "status-breathe",
             tone === "ok" && "bg-ok",
             tone === "warn" && "bg-warn",
             tone === "danger" && "bg-danger",
@@ -219,8 +236,9 @@ export function SeverityBadge({ severity }: { severity: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded border px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-wide",
-        toneClasses[tone]
+        "inline-flex items-center rounded border px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide backdrop-blur-md",
+        toneClasses[tone],
+        toneGlow[tone]
       )}
     >
       {severity}
@@ -251,10 +269,13 @@ export function LifecycleRail({
           <li key={step} className="flex items-center gap-1">
             <span
               className={cn(
-                "rounded-full border px-2.5 py-1 text-xs font-medium",
-                active && "border-brand bg-brand text-white",
-                done && "border-ok/30 bg-ok-wash text-ok",
-                !active && !done && "border-line-soft bg-surface-sunken text-ink-muted"
+                "rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-md transition-all duration-300",
+                active &&
+                  "border-brand/60 bg-brand/25 text-brand-bright shadow-glow-brand scale-105",
+                done && "border-ok/35 bg-ok/[0.14] text-ok",
+                !active &&
+                  !done &&
+                  "border-white/[0.1] bg-white/[0.04] text-ink-faint"
               )}
             >
               {statusLabel(step)}
@@ -262,8 +283,8 @@ export function LifecycleRail({
             {i < steps.length - 1 ? (
               <span
                 className={cn(
-                  "h-px w-4",
-                  done ? "bg-ok/40" : "bg-line-strong"
+                  "h-px w-5 transition-colors duration-300",
+                  done ? "bg-ok/50" : "bg-white/[0.14]"
                 )}
               />
             ) : null}
@@ -302,7 +323,7 @@ export function Timeline({
             <div className="flex flex-col items-center">
               <span
                 className={cn(
-                  "mt-1 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-surface-card",
+                  "mt-1 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-canvas/80",
                   tone === "ok" && "bg-ok",
                   tone === "warn" && "bg-warn",
                   tone === "danger" && "bg-danger",
@@ -311,7 +332,9 @@ export function Timeline({
                   tone === "neutral" && "bg-ink-muted"
                 )}
               />
-              {!isLast ? <span className="w-px flex-1 bg-line-strong" /> : null}
+              {!isLast ? (
+                <span className="w-px flex-1 bg-gradient-to-b from-white/[0.16] to-white/[0.04]" />
+              ) : null}
             </div>
             <div className="min-w-0 flex-1 pb-1">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
