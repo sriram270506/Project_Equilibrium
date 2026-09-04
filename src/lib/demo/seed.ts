@@ -6,6 +6,7 @@ import {
   OBSERVATION_DAYS,
 } from "./supplier-profiles";
 import { evaluateOpportunity } from "@/src/server/opportunity-service";
+import { INVOICE_FIXTURES, REASON_CODE_CATALOGUE } from "./invoice-fixtures";
 import {
   DEFAULT_TENANT_ID,
   DEFAULT_TENANT_NAME,
@@ -59,6 +60,7 @@ export interface SeedResult {
   recommended: number;
   rejected: number;
   disputeCases: number;
+  invoices: number;
 }
 
 /** Stable, human-readable ids. `sup_001`, `obs_003_017`, and so on. */
@@ -116,6 +118,8 @@ function defaultReferenceDate(): Date {
  * Exported because the demo reset endpoint and the verifier both need it.
  */
 export async function clearAll(db: Db = defaultPrisma): Promise<void> {
+  await db.controllerTrace.deleteMany();
+  await db.invoice.deleteMany();
   await db.reconciliationCase.deleteMany();
   await db.mockProviderRecord.deleteMany();
   await db.disputeDraft.deleteMany();
@@ -380,6 +384,86 @@ export async function seedDatabase(
 
   log("Created 1 dispute case with 2 documents and 4 evidence claims");
 
+  /* --------------------------------------------------------- invoices */
+  /*
+   * Twelve invoices with deliberate, named defects so the controller has real
+   * work rather than an empty queue. Every rule they are scored against is a
+   * real one - GST arithmetic, GSTIN structure, and the MSMED Act's 45-day
+   * payment limit.
+   */
+  let invoicesCreated = 0;
+  for (const fixture of INVOICE_FIXTURES) {
+    const invoiceDate = new Date(referenceDate);
+    invoiceDate.setUTCDate(invoiceDate.getUTCDate() - fixture.invoiceDaysAgo);
+
+    const dueDate = new Date(invoiceDate);
+    dueDate.setUTCDate(dueDate.getUTCDate() + fixture.termsDays);
+
+    const reasons =
+      fixture.expectedReasons.length > 0
+        ? fixture.expectedReasons
+        : ["NO_VENDOR_HISTORY"];
+
+    // Score from severity rather than a flat 90: a round-amount flag and a
+    // duplicate payment are not the same kind of problem.
+    const severityWeight: Record<string, number> = {
+      HIGH: 34,
+      MEDIUM: 18,
+      LOW: 7,
+    };
+    const score = Math.min(
+      95,
+      12 +
+        fixture.expectedReasons.reduce(
+          (total, code) =>
+            total + (severityWeight[REASON_CODE_CATALOGUE[code]?.severity ?? "LOW"] ?? 7),
+          0
+        )
+    );
+
+    const hasHigh = fixture.expectedReasons.some(
+      (c) => REASON_CODE_CATALOGUE[c]?.severity === "HIGH"
+    );
+
+    await db.invoice.create({
+      data: {
+        id: fixture.id,
+        tenantId: DEFAULT_TENANT_ID,
+        sourceHash: `sha256_fixture_${fixture.id}`,
+        idempotencyKey: `idem_fixture_${fixture.id}`,
+        fileName: fixture.fileName,
+        mimeType: "application/pdf",
+        fileSizeBytes: 48_000 + invoicesCreated * 1_200,
+        vendorName: fixture.vendorName,
+        vendorGstin: fixture.vendorGstin,
+        invoiceNumber: fixture.invoiceNumber,
+        invoiceDate,
+        dueDate,
+        subtotalPaise: fixture.subtotalPaise,
+        taxPaise: fixture.taxPaise,
+        totalPaise: fixture.totalPaise,
+        extractionStatus: "COMPLETE",
+        validationStatus: fixture.expectedReasons.length ? "FAILED" : "PASSED",
+        anomalyStatus: fixture.expectedReasons.length ? "NEEDS_REVIEW" : "OPEN",
+        anomalyRisk: hasHigh
+          ? "HIGH"
+          : fixture.expectedReasons.length
+            ? "MEDIUM"
+            : "LOW",
+        anomalyScore: score,
+        anomalyReasonCodesJson: JSON.stringify(reasons),
+        explanation: fixture.teachingNote,
+        explanationStatus: "COMPLETE",
+        createdAt: invoiceDate,
+      },
+    });
+    invoicesCreated++;
+  }
+
+  log(
+    `Created ${invoicesCreated} invoices (${INVOICE_FIXTURES.filter((f) => f.expectedReasons.length).length} carrying deliberate defects)`
+  );
+
   return {
     users: DEMO_USERS.length,
     suppliers: SUPPLIER_PROFILES.length,
@@ -388,6 +472,7 @@ export async function seedDatabase(
     recommended,
     rejected,
     disputeCases: 1,
+    invoices: invoicesCreated,
   };
 }
 

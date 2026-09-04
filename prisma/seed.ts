@@ -37,6 +37,7 @@ async function main() {
     " (" + result.recommended + " recommended, " + result.rejected + " rejected)"
   );
   console.log("  dispute cases  " + result.disputeCases);
+  console.log("  invoices       " + result.invoices);
 }
 
 main()
