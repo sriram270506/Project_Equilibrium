@@ -20,6 +20,10 @@ import { StatusChip } from "@/src/components/ui/status";
 import { ExplanationPanel } from "@/src/components/explainability";
 import { DealMathCard } from "@/src/components/deal-math";
 import { RunwayChart } from "@/src/components/runway-chart";
+import { ForecastChart } from "@/src/components/forecast-chart";
+import { RateBenchmarkCard } from "@/src/components/rate-benchmark";
+import type { InterventionComparison } from "@/src/lib/forecast/cash-projection";
+import type { RateBenchmark } from "@/src/lib/benchmark/market-data";
 import { PredictionExplanation } from "@/src/lib/ml/explain";
 import { DealEconomics } from "@/src/lib/deal-economics";
 
@@ -62,6 +66,8 @@ interface OfferDetail {
     daysRunway: number;
   }>;
   payment: { id: string; status: string; correlationId: string } | null;
+  forecast: InterventionComparison | null;
+  rateBenchmark: RateBenchmark;
 }
 
 export default function OfferDetailPage({
@@ -170,8 +176,22 @@ export default function OfferDetailPage({
         </div>
       ) : null}
 
+      {data.forecast ? (
+        <div className="mb-4">
+          <ForecastChart
+            projection={data.forecast.baseline}
+            comparison={data.forecast}
+            supplierName={supplier.name}
+          />
+        </div>
+      ) : null}
+
       <div className="mb-4">
         <RunwayChart observations={observations} supplierName={supplier.name} />
+      </div>
+
+      <div className="mb-4">
+        <RateBenchmarkCard benchmark={data.rateBenchmark} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
