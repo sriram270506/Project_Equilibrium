@@ -38,6 +38,12 @@ interface AnomalyCost {
   basis: string;
 }
 
+interface Counterfactual {
+  code: string;
+  change: string;
+  actionable: "FIXABLE_BY_US" | "NEEDS_VENDOR" | "NEEDS_JUDGEMENT";
+}
+
 interface InvoiceRow {
   id: string;
   vendorName: string;
@@ -49,6 +55,7 @@ interface InvoiceRow {
   reasonCodes: string[];
   explanation: string | null;
   termsDays: number | null;
+  counterfactuals: Counterfactual[];
   exposure: {
     exactPaise: number;
     totalPaise: number;
@@ -348,6 +355,45 @@ export default function ControllerPage() {
                           </div>
                         </div>
                       ))}
+                  </CardBody>
+                </Card>
+              ) : null}
+
+              {/* What would have to change - the question an operator asks
+                  when they disagree with a finding. */}
+              {selectedInvoice && selectedInvoice.counterfactuals.length > 0 ? (
+                <Card>
+                  <CardHeader
+                    eyebrow="Counterfactual"
+                    title="What would clear each flag"
+                    hint="Separated by who can act: some we can fix ourselves, some need the vendor, some need a judgement call."
+                  />
+                  <CardBody className="space-y-2.5">
+                    {selectedInvoice.counterfactuals.map((cf) => (
+                      <div
+                        key={cf.code}
+                        className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-[13px] leading-relaxed text-ink-body">
+                            {cf.change}
+                          </p>
+                          <span
+                            className={cn(
+                              "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                              cf.actionable === "FIXABLE_BY_US" &&
+                                "border-ok/35 bg-ok/[0.12] text-ok",
+                              cf.actionable === "NEEDS_VENDOR" &&
+                                "border-warn/35 bg-warn/[0.12] text-warn",
+                              cf.actionable === "NEEDS_JUDGEMENT" &&
+                                "border-info/35 bg-info/[0.12] text-info"
+                            )}
+                          >
+                            {cf.actionable.replace(/_/g, " ").toLowerCase()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </CardBody>
                 </Card>
               ) : null}

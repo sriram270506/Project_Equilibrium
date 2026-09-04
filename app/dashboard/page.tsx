@@ -21,6 +21,10 @@ import {
 } from "@/src/components/ui/primitives";
 import { StatusChip } from "@/src/components/ui/status";
 import { RiskBar } from "@/src/components/explainability";
+import {
+  PortfolioExposure,
+  type PortfolioForecast,
+} from "@/src/components/portfolio-exposure";
 
 interface DashboardData {
   headline: {
@@ -43,6 +47,7 @@ interface DashboardData {
     paymentsNeedingAttention: number;
     pendingOutboxEvents: number;
   };
+  portfolioForecast: PortfolioForecast;
   integrity: {
     ledgerBalanced: boolean;
     totalDebitsPaise: number;
@@ -93,7 +98,7 @@ export default function OverviewPage() {
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!data) return null;
 
-  const { headline, kpis, integrity, recentPayments } = data;
+  const { headline, kpis, integrity, recentPayments, portfolioForecast } = data;
 
   return (
     <div className="fade-up max-w-6xl">
@@ -173,6 +178,13 @@ export default function OverviewPage() {
           }
         />
       </div>
+
+      {/* What approving everything would commit, and whether we can fund it. */}
+      {portfolioForecast && portfolioForecast.curve.length > 0 ? (
+        <div className="mt-4">
+          <PortfolioExposure forecast={portfolioForecast} />
+        </div>
+      ) : null}
 
       {/* The integrity claim, stated plainly and checked live. */}
       <div className="mt-4">

@@ -6,6 +6,7 @@ import { formatPaise } from "@/src/lib/money";
 import {
   costInvoiceAnomalies,
   summarisePreventedLoss,
+  counterfactualsFor,
 } from "@/src/lib/invoices/economics";
 import { withRateLimit, getUserIdentifier } from "@/src/lib/api/rate-limit-middleware";
 import { processInvoice } from "@/src/lib/invoices/pipeline";
@@ -92,6 +93,7 @@ const list = async (
                   86_400_000
               )
             : null,
+          counterfactuals: counterfactualsFor(forCosting[index]),
           exposure: {
             exactPaise: costs.exactExposurePaise,
             totalPaise: costs.totalExposurePaise,

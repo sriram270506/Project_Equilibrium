@@ -2,6 +2,7 @@ import { prisma } from "@/src/lib/prisma";
 import { successEnvelope, errorEnvelope } from "@/src/lib/api-envelope";
 import { formatPaise } from "@/src/lib/money";
 import { calculateTrialBalance } from "@/src/lib/ledger/trial-balance";
+import { getRiskLimits } from "@/src/lib/risk/controls";
 import { NextResponse } from "next/server";
 
 /**
@@ -70,6 +71,46 @@ export async function GET() {
 
     const mostUrgent = atRiskOpportunities[0] ?? null;
 
+    /*
+     * Portfolio-level projection.
+     *
+     * Per-supplier forecasts answer "should I approve this one?". A treasury
+     * operator also needs "how much am I committing across the whole book over
+     * the next fortnight, and when does it land?" - which is a different
+     * question and the one that decides whether the platform can fund it.
+     */
+    const horizonDays = 14;
+    const committedByDay = Array.from({ length: horizonDays }, () => 0);
+
+    // Offers awaiting approval, spread by urgency: the most distressed
+    // suppliers need the money soonest.
+    for (const offer of atRiskOpportunities) {
+      const urgency = offer.predictionProbability;
+      // Higher probability => earlier expected draw.
+      const expectedDay = Math.max(
+        1,
+        Math.min(horizonDays, Math.round((1 - urgency) * horizonDays))
+      );
+      committedByDay[expectedDay - 1] += offer.expectedBenefitPaise;
+    }
+
+    let running = 0;
+    const exposureCurve = committedByDay.map((amount, index) => {
+      running += amount;
+      return {
+        day: index + 1,
+        newCommitmentPaise: amount,
+        cumulativePaise: running,
+      };
+    });
+
+    const riskLimits = await getRiskLimits();
+    const peakExposure = running;
+    const headroomPaise = Math.max(
+      riskLimits.dailyExposureLimitPaise - peakExposure,
+      0
+    );
+
     // Payments that need a human: stuck in a non-terminal state.
     const needsAttention = paymentsByStatus
       .filter((g) => ["UNKNOWN", "MANUAL_REVIEW", "PENDING_APPROVAL"].includes(g.status))
@@ -100,6 +141,20 @@ export async function GET() {
           criticalExceptions,
           paymentsNeedingAttention: needsAttention,
           pendingOutboxEvents: pendingOutbox,
+        },
+        portfolioForecast: {
+          horizonDays,
+          curve: exposureCurve,
+          peakExposurePaise: peakExposure,
+          peakExposureDisplay: formatPaise(peakExposure),
+          dailyLimitPaise: riskLimits.dailyExposureLimitPaise,
+          headroomPaise,
+          headroomDisplay: formatPaise(headroomPaise),
+          utilisation:
+            riskLimits.dailyExposureLimitPaise > 0
+              ? Math.min(peakExposure / riskLimits.dailyExposureLimitPaise, 1)
+              : 0,
+          withinLimit: peakExposure <= riskLimits.dailyExposureLimitPaise,
         },
         integrity: {
           ledgerBalanced: trialBalance.balanced,

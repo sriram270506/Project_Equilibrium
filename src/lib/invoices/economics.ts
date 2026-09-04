@@ -237,3 +237,119 @@ export function summarisePreventedLoss(
     ),
   };
 }
+
+
+export interface InvoiceCounterfactual {
+  code: string;
+  /** What would have to be different for this flag to clear. */
+  change: string;
+  /** Whether the operator can act on it, or only the vendor can. */
+  actionable: "FIXABLE_BY_US" | "NEEDS_VENDOR" | "NEEDS_JUDGEMENT";
+}
+
+/**
+ * What would have to change for each flag to clear.
+ *
+ * This is the question an operator actually asks when they disagree with a
+ * finding: not "how confident are you" but "what would make this fine?" It also
+ * separates the defects we can fix ourselves from the ones only the vendor can,
+ * which decides who gets the email.
+ */
+export function counterfactualsFor(
+  invoice: InvoiceForCosting
+): InvoiceCounterfactual[] {
+  const out: InvoiceCounterfactual[] = [];
+  const expectedTotal = invoice.subtotalPaise + invoice.taxPaise;
+  const rupees = (paise: number) =>
+    `Rs ${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+
+  for (const code of invoice.reasonCodes) {
+    switch (code) {
+      case "TOTAL_MISMATCH": {
+        const delta = invoice.totalPaise - expectedTotal;
+        out.push({
+          code,
+          change: `If the total read ${rupees(expectedTotal)} instead of ${rupees(invoice.totalPaise)} — a correction of ${rupees(Math.abs(delta))} — the arithmetic would balance and this would clear.`,
+          actionable: "NEEDS_VENDOR",
+        });
+        break;
+      }
+
+      case "INVALID_GSTIN":
+        out.push({
+          code,
+          change:
+            "If the vendor supplied a well-formed 15-character GSTIN, input tax credit would be claimable and the full GST component would be recoverable.",
+          actionable: "NEEDS_VENDOR",
+        });
+        break;
+
+      case "TERMS_EXCEED_MSMED_LIMIT": {
+        const termsDays = invoice.dueDate
+          ? Math.round(
+              (invoice.dueDate.getTime() - invoice.invoiceDate.getTime()) /
+                86_400_000
+            )
+          : 45;
+        const excess = Math.max(0, termsDays - 45);
+        out.push({
+          code,
+          change: `If the due date were pulled forward by ${excess} day${excess === 1 ? "" : "s"} to land within 45 days of the invoice date, this would comply with MSMED s.15 and accrue no statutory interest.`,
+          // We set our own payment terms, so this one is ours to fix.
+          actionable: "FIXABLE_BY_US",
+        });
+        break;
+      }
+
+      case "SIMILAR_INVOICE":
+        out.push({
+          code,
+          change:
+            "If the earlier invoice for the same amount were confirmed as a separate order — a different purchase order or delivery note would settle it — this would clear. If not, it is a duplicate and must not be paid.",
+          actionable: "NEEDS_JUDGEMENT",
+        });
+        break;
+
+      case "FUTURE_DATED":
+        out.push({
+          code,
+          change:
+            "If the invoice date were corrected to a date not in the future, this would clear. Check whether the date was mis-keyed or the invoice was raised ahead of delivery.",
+          actionable: "NEEDS_VENDOR",
+        });
+        break;
+
+      case "DUE_BEFORE_INVOICE":
+        out.push({
+          code,
+          change:
+            "If the due date fell after the invoice date, this would clear. The two fields have almost certainly been transposed during extraction.",
+          actionable: "FIXABLE_BY_US",
+        });
+        break;
+
+      case "VALUE_OUTLIER":
+        out.push({
+          code,
+          change:
+            "If a purchase order justified this quantity, it would clear. A genuine bulk order and a misplaced decimal look identical on the document, so only the order record settles it.",
+          actionable: "NEEDS_JUDGEMENT",
+        });
+        break;
+
+      case "ROUND_AMOUNT":
+        out.push({
+          code,
+          change:
+            "If the line items multiplied out to this figure, it would clear. Round totals are weak evidence alone and only matter alongside another flag.",
+          actionable: "NEEDS_JUDGEMENT",
+        });
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  return out;
+}
