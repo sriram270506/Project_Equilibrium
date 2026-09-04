@@ -32,6 +32,8 @@ import { ensureSeeded, clearTransactionalState } from "../src/lib/demo/seed";
 import { OBSERVATION_DAYS } from "../src/lib/demo/supplier-profiles";
 import { scopedQueries } from "../src/lib/tenancy/scoped-queries";
 import { resolveInternalTenantId } from "../src/lib/tenancy/constants";
+import { processInvoice } from "../src/lib/invoices/pipeline";
+import { runFinanceController } from "../src/lib/controller/finance-controller";
 
 const prisma = new PrismaClient();
 
@@ -78,6 +80,7 @@ async function main() {
   );
 
   await clearTransactionalState(prisma);
+  await prisma.invoice.deleteMany();
   await setKillSwitch(false, "verify-script");
 
   const suppliers = await prisma.supplier.findMany();
@@ -449,8 +452,49 @@ async function main() {
   const limits = await getRiskLimits();
   check("The kill switch released cleanly", limits.killSwitchEngaged === false);
 
+  /* ------------------------------------------------ invoice pipeline */
+  section("12. Invoice intake and anomaly review");
+
+  const invoiceBytes = new TextEncoder().encode(
+    "%PDF-1.7\nvendorName:Two Similar Invoices\ngstin:27ABCDE1234F1Z5\ninvoiceNumber:INV-VERIFY-001\ninvoiceDate:2026-09-01\ndueDate:2026-09-30\nsubtotalPaise:100000\ntaxPaise:18000\ntotalPaise:119000\n"
+  );
+  const invoiceTenant = await resolveInternalTenantId();
+  const firstInvoice = await processInvoice({
+    tenantId: invoiceTenant,
+    fileName: "invoice.pdf",
+    declaredMimeType: "application/pdf",
+    bytes: invoiceBytes,
+    idempotencyKey: "verify-invoice-key-001",
+  });
+  const duplicateInvoice = await processInvoice({
+    tenantId: invoiceTenant,
+    fileName: "invoice.pdf",
+    declaredMimeType: "application/pdf",
+    bytes: invoiceBytes,
+    idempotencyKey: "verify-invoice-key-001",
+  });
+  check("Duplicate invoice upload is blocked atomically", duplicateInvoice.duplicate && duplicateInvoice.invoice.id === firstInvoice.invoice.id);
+  check("Arithmetic-mismatch invoice enters NEEDS_REVIEW automatically", firstInvoice.invoice.validationStatus === "FAILED" && firstInvoice.invoice.anomalyRisk === "HIGH");
+  check("Invoice anomaly reason includes arithmetic mismatch", firstInvoice.invoice.anomalyReasonCodesJson.includes("ARITHMETIC_MISMATCH"));
+
+  const similarBytes = new TextEncoder().encode(
+    "%PDF-1.7\nvendorName:Two Similar Invoices\ngstin:27ABCDE1234F1Z5\ninvoiceNumber:INV-VERIFY-002\ninvoiceDate:2026-09-02\ndueDate:2026-10-01\nsubtotalPaise:100000\ntaxPaise:18000\ntotalPaise:118000\n"
+  );
+  const similarInvoice = await processInvoice({ tenantId: invoiceTenant, fileName: "invoice-2.pdf", declaredMimeType: "application/pdf", bytes: similarBytes, idempotencyKey: "verify-invoice-key-002" });
+  check("Two similar invoices receive an anomaly reason", similarInvoice.invoice.anomalyReasonCodesJson.includes("SIMILAR_INVOICE"));
+
+  const invoiceAudit = await prisma.auditEvent.count({ where: { aggregateType: "INVOICE", aggregateId: firstInvoice.invoice.id } });
+  check("Invoice anomaly transition is written to the audit chain", invoiceAudit >= 1);
+
+  const controllerRun = await runFinanceController(invoiceTenant, firstInvoice.invoice.id);
+  check("Controller stops high-risk invoice review before proposing payment", controllerRun.recommendation === "REVIEW_ANOMALY" && controllerRun.status === "STOPPED");
+  check("Controller records typed tool calls", controllerRun.toolCalls.some((call) => call.name === "inspect_invoice_anomaly"));
+  check("Controller cannot bypass human review", controllerRun.stopReason === "HIGH_ANOMALY_REQUIRES_HUMAN_REVIEW");
+  const controllerAudit = await prisma.auditEvent.count({ where: { aggregateType: "CONTROLLER_TRACE", aggregateId: controllerRun.traceId } });
+  check("Controller run and tool calls are auditable", controllerAudit >= controllerRun.toolCalls.length + 1);
+
   /* ---------------------------------------------------- concurrency */
-  section("12. Concurrent approvals cannot double-pay");
+  section("13. Concurrent approvals cannot double-pay");
 
   const raceOffer = await prisma.liquidityOpportunity.findFirst({
     where: { status: "RECOMMENDED" },
@@ -501,7 +545,7 @@ async function main() {
   }
 
   /* ------------------------------------------------ tenant isolation */
-  section("13. One tenant cannot see another's data");
+  section("14. One tenant cannot see another's data");
 
   /*
    * Multi-tenancy is only worth anything if it is enforced. Creating a second

@@ -6,9 +6,15 @@ A supplier delivers goods on Monday and gets paid 30 days later. Payroll is on
 Friday. That gap is the single largest cause of MSME failure in India, and it
 has nothing to do with whether the business is any good.
 
-Equilibrium predicts which marketplace suppliers are about to run short of cash,
+Equilibrium is an AI Finance Controller that predicts which marketplace suppliers are about to run short of cash,
 offers them their own receivables early at a fair price, and then moves that
 money with the reliability guarantees a bank requires.
+
+The controller reads messy invoice state, detects and explains anomalies,
+evaluates liquidity opportunity, and proposes the next safe finance operation
+through typed read-only tools. Deterministic policy, human approval, payment,
+ledger, and reconciliation controls remain authoritative; the AI cannot move
+money directly.
 
 ---
 
@@ -68,8 +74,31 @@ npm run demo:verify
 
 This drives the real services end to end — scores every supplier, approves and
 pays, clears a maker-checker gate, injects a provider timeout, replays a
-webhook, reconciles, and checks the books — asserting **39 invariants** and
-exiting non-zero if any fails.
+webhook, reconciles, and checks the books — asserting **48 invariants** and
+exiting non-zero if any fails. The invoice/controller path is also covered by
+duplicate-upload, arithmetic-mismatch, similar-invoice, and controller-audit
+checks.
+
+### Optional real AI providers
+
+The default `AI_PROVIDER=mock` keeps local development and CI credential-free.
+For real invoice extraction and read-only explanations, set `AI_PROVIDER=azure`
+and provide:
+
+```text
+AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT=https://<resource>.cognitiveservices.azure.com
+AZURE_DOCUMENT_INTELLIGENCE_KEY=<secret>
+AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com
+AZURE_OPENAI_KEY=<secret>
+AZURE_OPENAI_DEPLOYMENT=<chat-deployment-name>
+AZURE_OPENAI_API_VERSION=2024-10-21
+```
+
+Document Intelligence extraction is schema-validated before invoice persistence.
+Azure OpenAI receives only validated fields and deterministic reason codes, must
+return `{ "explanation": "..." }`, and is limited to a 2.5-second read-only
+explanation call. Any timeout or invalid output falls back to
+`explanation unavailable`.
 
 ```
   PASS  Model beats the runway<7d baseline on held-out AUC — 0.959 vs 0.940
@@ -83,7 +112,7 @@ exiting non-zero if any fails.
   PASS  The kill switch refuses new payments while engaged
   PASS  Fetching another tenant's record by id returns nothing
 
-  39 passed, 0 failed
+  48 passed, 0 failed
 ```
 
 ### Retrain the model

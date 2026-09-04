@@ -114,6 +114,27 @@ export const RATE_LIMITS = {
     windowMs: 60 * 1000, // 1 minute
     keyPrefix: "rl:api-key",
   } as RateLimitConfig,
+
+  // Invoice upload operations: 20 per 15 minutes per user/IP
+  invoiceUpload: {
+    maxRequests: 20,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    keyPrefix: "rl:inv-upload",
+  } as RateLimitConfig,
+
+  // Extraction operations: 30 per minute per user/IP
+  extraction: {
+    maxRequests: 30,
+    windowMs: 60 * 1000, // 1 minute
+    keyPrefix: "rl:extraction",
+  } as RateLimitConfig,
+
+  // Anomaly score calculation: 60 per minute per user/IP
+  anomalyScore: {
+    maxRequests: 60,
+    windowMs: 60 * 1000, // 1 minute
+    keyPrefix: "rl:anomaly",
+  } as RateLimitConfig,
 };
 
 /**

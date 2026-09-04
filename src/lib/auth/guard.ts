@@ -133,8 +133,8 @@ export function withAuth<T extends { params?: unknown }>(
   };
 }
 
-function isDemoMode(): boolean {
-  return (process.env.APP_MODE || "demo") === "demo";
+export function isDemoMode(): boolean {
+  return process.env.NODE_ENV !== "production" && process.env.APP_MODE === "demo";
 }
 
 /**

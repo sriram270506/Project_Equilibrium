@@ -35,6 +35,11 @@ describe("Money utilities", () => {
       expect(result).toStrictEqual(300);
       expect(Number.isInteger(result)).toBe(true);
     });
+
+    it("should throw error if input is invalid or result overflows/non-integer", () => {
+      expect(() => addPaise(-10, 100)).toThrow();
+      expect(() => addPaise(10.5, 100)).toThrow();
+    });
   });
 
   describe("subtractPaise", () => {
@@ -43,9 +48,14 @@ describe("Money utilities", () => {
       expect(subtractPaise(200000, 50000)).toBe(150000);
     });
 
-    it("should handle zero", () => {
+    it("should handle zero and exact subtraction", () => {
       expect(subtractPaise(100, 0)).toBe(100);
-      expect(subtractPaise(0, 100)).toBe(-100);
+      expect(subtractPaise(100, 100)).toBe(0);
+    });
+
+    it("should throw when subtraction results in a negative amount", () => {
+      expect(() => subtractPaise(0, 100)).toThrow("Invalid paise amount: -100 is negative");
+      expect(() => subtractPaise(50, 100)).toThrow("Invalid paise amount: -50 is negative");
     });
 
     it("should return integer result", () => {
@@ -77,6 +87,11 @@ describe("Money utilities", () => {
     it("should handle zero", () => {
       expect(multiplyPaise(100, 0)).toBe(0);
       expect(multiplyPaise(0, 5)).toBe(0);
+    });
+
+    it("should throw on negative result or invalid factor", () => {
+      expect(() => multiplyPaise(100, -1)).toThrow();
+      expect(() => multiplyPaise(100, NaN)).toThrow();
     });
   });
 });

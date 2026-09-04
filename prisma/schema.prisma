@@ -22,6 +22,8 @@ model Tenant {
   disputes  DisputeCase[]
   auditEvents AuditEvent[]
   opportunities LiquidityOpportunity[]
+  invoices  Invoice[]
+  controllerTraces ControllerTrace[]
   
   @@index([isActive])
 }
@@ -363,6 +365,58 @@ model IdempotencyKey {
   @@index([status])
 }
 
+model Invoice {
+  id                    String   @id
+  tenantId              String
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sourceHash            String   @unique
+  idempotencyKey        String   @unique
+  fileName              String
+  mimeType              String
+  fileSizeBytes         Int
+  vendorName            String
+  vendorGstin           String
+  invoiceNumber         String
+  invoiceDate           DateTime
+  dueDate               DateTime?
+  subtotalPaise         Int
+  taxPaise              Int
+  totalPaise             Int
+  extractionStatus      String   @default("PENDING")
+  validationStatus      String   @default("PENDING")
+  anomalyStatus         String   @default("OPEN")
+  anomalyRisk           String   @default("MEDIUM")
+  anomalyScore          Int      @default(50)
+  anomalyReasonCodesJson String  @default("[]")
+  explanation           String?
+  explanationStatus     String   @default("PENDING")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  controllerTraces      ControllerTrace[]
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, anomalyStatus])
+}
+
+model ControllerTrace {
+  id              String   @id
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoiceId       String?
+  invoice         Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  runStatus       String
+  recommendation  String
+  stopReason      String?
+  modelVersion    String?
+  correlationId   String
+  toolCallsJson   String   @default("[]")
+  factsJson       String   @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([invoiceId, createdAt])
+}
+
 
 /// Runtime risk controls. A single row (id = "default") that operators can
 /// change without a deploy, because the moment you need a kill switch is
@@ -382,6 +436,8 @@ model RiskControl {
   dualApprovalThresholdPaise Int    @default(7500000)
   /// Most that may be outstanding to any one supplier at once.
   perSupplierLimitPaise    Int      @default(30000000)
+  invoiceAutoProcessingHalted Boolean @default(false)
+  invoiceHaltReason        String?
   updatedAt                DateTime @updatedAt
   updatedBy                String?
 }

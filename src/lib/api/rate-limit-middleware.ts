@@ -43,7 +43,7 @@ export function extractIdentifier(
  * Usage: export const POST = withRateLimit("webhook", async (request) => { ... })
  */
 export function withRateLimit<T extends (req: NextRequest, ...args: any[]) => Promise<NextResponse>>(
-  limitType: "webhook" | "auth" | "dispute" | "approval" | "apiKey",
+  limitType: "webhook" | "auth" | "dispute" | "approval" | "apiKey" | "invoiceUpload" | "extraction" | "anomalyScore",
   handler: T,
   options: { getIdentifier?: (req: NextRequest) => string } = {}
 ): T {
@@ -66,6 +66,15 @@ export function withRateLimit<T extends (req: NextRequest, ...args: any[]) => Pr
           break;
         case "apiKey":
           config = RATE_LIMITS.apiKeyValidation;
+          break;
+        case "invoiceUpload":
+          config = RATE_LIMITS.invoiceUpload;
+          break;
+        case "extraction":
+          config = RATE_LIMITS.extraction;
+          break;
+        case "anomalyScore":
+          config = RATE_LIMITS.anomalyScore;
           break;
         default:
           config = RATE_LIMITS.apiKeyValidation;

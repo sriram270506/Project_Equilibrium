@@ -22,6 +22,8 @@ export interface RiskLimits {
   perTransactionCapPaise: number;
   dualApprovalThresholdPaise: number;
   perSupplierLimitPaise: number;
+  invoiceAutoProcessingHalted: boolean;
+  invoiceHaltReason: string | null;
 }
 
 const DEFAULT_ID = "default";
@@ -207,6 +209,18 @@ export async function setKillSwitch(
   });
 
   return updated;
+}
+
+export async function setInvoiceProcessingHalt(engaged: boolean, actorId: string, reason?: string) {
+  await getRiskLimits();
+  return prisma.riskControl.update({
+    where: { id: DEFAULT_ID },
+    data: {
+      invoiceAutoProcessingHalted: engaged,
+      invoiceHaltReason: engaged ? (reason ?? "No reason given") : null,
+      updatedBy: actorId,
+    },
+  });
 }
 
 /** Update the numeric limits. */

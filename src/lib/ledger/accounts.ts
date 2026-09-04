@@ -22,6 +22,8 @@
  * accounting compliance.
  */
 
+import { addPaise, subtractPaise } from "../money";
+
 export type AccountType = "ASSET" | "LIABILITY" | "EXPENSE" | "INCOME";
 export type NormalBalance = "DEBIT" | "CREDIT";
 
@@ -172,8 +174,8 @@ export function assertJournalBalanced(legs: JournalLeg[]): void {
       );
     }
 
-    debits += leg.debitPaise;
-    credits += leg.creditPaise;
+    debits = addPaise(debits, leg.debitPaise);
+    credits = addPaise(credits, leg.creditPaise);
   }
 
   if (debits !== credits) {
@@ -233,7 +235,7 @@ export function buildEarlyPaymentJournal(
     );
   }
 
-  const discountPaise = faceValuePaise - advancePaise;
+  const discountPaise = subtractPaise(faceValuePaise, advancePaise);
   const providerFeePaise = Math.round((advancePaise * providerFeeBps) / 10000);
   const fundingCostPaise = Math.round(
     (advancePaise * fundingCostBps * daysEarly) / (10000 * 365)
@@ -280,7 +282,7 @@ export function buildEarlyPaymentJournal(
     legs.push({
       accountCode: "PLATFORM_CASH",
       debitPaise: 0,
-      creditPaise: providerFeePaise + fundingCostPaise,
+      creditPaise: addPaise(providerFeePaise, fundingCostPaise),
       memo: "Cash consumed by fees and funding",
     });
   }

@@ -17,7 +17,7 @@ export function rupeesToPaise(value: string | number): number {
 }
 
 export function assertValidPaise(value: number): void {
-  if (!Number.isInteger(value)) {
+  if (!Number.isSafeInteger(value)) {
     throw new Error(`Invalid paise amount: ${value} is not an integer`);
   }
   if (value < 0) {
@@ -28,31 +28,33 @@ export function assertValidPaise(value: number): void {
 export function addPaise(a: number, b: number): number {
   assertValidPaise(a);
   assertValidPaise(b);
-  return a + b;
+  const result = a + b;
+  assertValidPaise(result);
+  return result;
 }
 
 export function subtractPaise(a: number, b: number): number {
   assertValidPaise(a);
   assertValidPaise(b);
-  return a - b;
+  const result = a - b;
+  assertValidPaise(result);
+  return result;
 }
 
 export function multiplyPaise(amount: number, factor: number): number {
   assertValidPaise(amount);
-  if (typeof factor !== "number") {
-    throw new Error(`Factor must be a number: ${factor}`);
+  if (typeof factor !== "number" || !Number.isFinite(factor) || Number.isNaN(factor)) {
+    throw new Error(`Factor must be a valid finite number: ${factor}`);
   }
   const result = Math.round(amount * factor);
-  if (result < 0) {
-    throw new Error(`Invalid multiplication: ${amount} * ${factor} = ${result} (negative)`);
-  }
+  assertValidPaise(result);
   return result;
 }
 
 export function percentageOfPaise(amount: number, basisPoints: number): number {
   assertValidPaise(amount);
-  if (!Number.isInteger(basisPoints)) {
-    throw new Error(`Basis points must be an integer: ${basisPoints}`);
+  if (!Number.isInteger(basisPoints) || basisPoints < 0) {
+    throw new Error(`Basis points must be a non-negative integer: ${basisPoints}`);
   }
   const result = Math.round((amount * basisPoints) / 10000);
   assertValidPaise(result);
@@ -60,9 +62,19 @@ export function percentageOfPaise(amount: number, basisPoints: number): number {
 }
 
 export function basisPointsToPercentage(bps: number): number {
+  if (typeof bps !== "number" || !Number.isFinite(bps) || Number.isNaN(bps)) {
+    throw new Error(`Basis points must be a valid number: ${bps}`);
+  }
   return bps / 100;
 }
 
 export function percentageToBasisPoints(percentage: number): number {
-  return Math.round(percentage * 100);
+  if (typeof percentage !== "number" || !Number.isFinite(percentage) || Number.isNaN(percentage) || percentage < 0) {
+    throw new Error(`Percentage must be a non-negative number: ${percentage}`);
+  }
+  const result = Math.round(percentage * 100);
+  if (!Number.isSafeInteger(result)) {
+    throw new Error(`Percentage produces an unsafe basis-point value: ${percentage}`);
+  }
+  return result;
 }

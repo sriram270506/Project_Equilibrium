@@ -1,4 +1,4 @@
-import { percentageOfPaise } from "./money";
+import { percentageOfPaise, subtractPaise } from "./money";
 
 /**
  * Dynamic discounting economics.
@@ -87,7 +87,7 @@ export function computeDealEconomics(
   }
 
   const discountPaise = percentageOfPaise(faceValuePaise, discountBps);
-  const supplierReceivesPaise = faceValuePaise - discountPaise;
+  const supplierReceivesPaise = subtractPaise(faceValuePaise, discountPaise);
 
   // Annualize: a discount held for `daysEarly` scales to a full year.
   const annualizedRateBps =

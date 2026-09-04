@@ -8,6 +8,13 @@ export const env = {
   demoOperatorId: process.env.DEMO_OPERATOR_ID || "demo-finance-operator",
   appName: process.env.NEXT_PUBLIC_APP_NAME || "Equilibrium",
   nodeEnv: process.env.NODE_ENV || "development",
+  aiProvider: process.env.AI_PROVIDER || "mock",
+  azureDocumentIntelligenceEndpoint: process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT || "",
+  azureDocumentIntelligenceKey: process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY || "",
+  azureOpenAIEndpoint: process.env.AZURE_OPENAI_ENDPOINT || "",
+  azureOpenAIKey: process.env.AZURE_OPENAI_KEY || "",
+  azureOpenAIDeployment: process.env.AZURE_OPENAI_DEPLOYMENT || "",
+  azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION || "2024-10-21",
 };
 
 export function assertDemoMode() {

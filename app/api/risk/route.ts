@@ -6,6 +6,7 @@ import {
   getRiskLimits,
   getTodayExposure,
   setKillSwitch,
+  setInvoiceProcessingHalt,
   updateRiskLimits,
 } from "@/src/lib/risk/controls";
 import { formatPaise } from "@/src/lib/money";
@@ -38,6 +39,7 @@ export const GET = withAuth("VIEWER", async () => {
 
 const updateSchema = z.object({
   killSwitchEngaged: z.boolean().optional(),
+  invoiceAutoProcessingHalted: z.boolean().optional(),
   killSwitchReason: z.string().max(280).optional(),
   dailyExposureLimitPaise: z.number().int().min(0).optional(),
   perTransactionCapPaise: z.number().int().min(0).optional(),
@@ -66,12 +68,16 @@ export const PATCH = withAuth("ADMIN", async (request: NextRequest, _ctx, auth) 
 
     const {
       killSwitchEngaged,
+      invoiceAutoProcessingHalted,
       killSwitchReason,
       ...numericLimits
     } = parsed.data;
 
     if (typeof killSwitchEngaged === "boolean") {
       await setKillSwitch(killSwitchEngaged, auth.userId, killSwitchReason);
+    }
+    if (typeof invoiceAutoProcessingHalted === "boolean") {
+      await setInvoiceProcessingHalt(invoiceAutoProcessingHalted, auth.userId, killSwitchReason);
     }
 
     if (Object.keys(numericLimits).length > 0) {

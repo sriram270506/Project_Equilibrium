@@ -27,6 +27,11 @@ const SECTIONS: Array<{
         label: "Suppliers at risk",
         hint: "Who needs cash, and why",
       },
+      {
+        href: "/dashboard/controller",
+        label: "AI controller",
+        hint: "Bounded recommendations and traces",
+      },
     ],
   },
   {

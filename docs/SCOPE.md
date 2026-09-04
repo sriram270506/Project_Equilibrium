@@ -28,6 +28,9 @@ time working out which is which. Everything below is checkable in the code.
 | Deterministic seed | [src/lib/demo/seed.ts](../src/lib/demo/seed.ts) | Two runs hash identically |
 | Multi-tenant isolation | [src/lib/tenancy/](../src/lib/tenancy/) | `demo:verify` creates a second tenant and proves queries do not cross |
 | Per-tenant roles | `TenantUser.role` | A role grants nothing outside its own tenant |
+| Bounded AI Finance Controller | [src/lib/controller/finance-controller.ts](../src/lib/controller/finance-controller.ts) | Read-only typed tools; policy and human approval remain authoritative |
+| Controller traces and tool-call audit | [ControllerTrace](../prisma/schema.prisma) | `/dashboard/controller` and `CONTROLLER_TOOL_CALL` audit events |
+| Invoice intake and anomaly review | [src/lib/invoices/pipeline.ts](../src/lib/invoices/pipeline.ts) | Mock extraction, deterministic validation, duplicate/similar-invoice detection |
 
 ## Simulated — works, but against a simulator rather than reality
 
@@ -42,6 +45,8 @@ time working out which is which. Everything below is checkable in the code.
 
 ## Not built — deliberately out of scope
 
+The invoice pipeline does not include a field-evidence provenance table; it stores resumable state, normalized reason codes, and controller traces instead.
+
 These would be required for production and are **not** present. No part of the
 UI or documentation should be read as claiming otherwise.
 
@@ -49,11 +54,10 @@ UI or documentation should be read as claiming otherwise.
 intercompany accounts, accrual-basis recognition, statutory chart-of-accounts
 mapping. The journal is single-entity, single-currency, cash-basis.
 
-**Infrastructure.** PostgreSQL (uses SQLite), migration history (uses
-`db push`), a durable queue, a background worker (the outbox drains via an
+**Infrastructure.** PostgreSQL (uses SQLite), a durable queue, a background worker (the outbox drains via an
 endpoint), horizontal scaling, load testing, capacity planning.
 
-**Security.** Session authentication (API keys only), rate limiting, CSRF,
+**Security.** Session authentication (API keys only), CSRF,
 secret-management integration, key rotation, encryption at rest, a formal
 threat model, dependency/supply-chain review.
 
@@ -68,7 +72,9 @@ testing, backup/restore procedures, alerting and on-call, SLOs, distributed
 tracing.
 
 **ML operations.** Model registry, feature store, drift monitoring, A/B testing,
-automated retraining, fairness evaluation across supplier segments.
+automated retraining, fairness evaluation across supplier segments. The
+controller uses the existing versioned liquidity artifact and a separate
+deterministic anomaly model; it does not autonomously retrain.
 
 **Product.** Any evidence that real marketplaces want this, that suppliers would
 accept these terms, or that the legal and contractual basis for changing payment
@@ -76,7 +82,7 @@ timing exists.
 
 ## The honest summary
 
-The correctness and reliability machinery is real and testable. The data,
+The correctness, bounded-controller, and reliability machinery is real and testable. The data,
 the counterparty, and the business case are not. This is a working prototype of
 a payment-operations control layer, evaluated against its own simulator.
 
