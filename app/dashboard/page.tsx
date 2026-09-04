@@ -25,6 +25,7 @@ import {
   PortfolioExposure,
   type PortfolioForecast,
 } from "@/src/components/portfolio-exposure";
+import { EventStream } from "@/src/components/event-stream";
 
 interface DashboardData {
   headline: {
@@ -227,6 +228,11 @@ export default function OverviewPage() {
             </Link>
           </CardBody>
         </Card>
+      </div>
+
+      {/* Live activity, so work happening elsewhere in the console is visible. */}
+      <div className="mt-6">
+        <EventStream />
       </div>
 
       {/* Recent money movement. */}
