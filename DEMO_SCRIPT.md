@@ -35,11 +35,13 @@ Have a terminal ready on a second desktop for the 4:35 shot.
 
 ## 0:00 — 0:35 · The problem
 
-**Screen** — Landing page, `/`. Scroll slowly from the masthead to the
+**Screen** — Landing page, `/`. Hold on the masthead long enough for the
+controller thesis to land, then scroll slowly to the
 "A concrete case" panel with the three-way comparison.
 
-> Small suppliers in India don't go broke because they lack revenue. They go
-> broke waiting to get paid.
+> AI can recommend a payment. Equilibrium decides whether it is safe enough to
+> execute. The model proposes, deterministic policy constrains, humans
+> authorize, and the ledger proves what happened.
 >
 > A supplier delivers on Monday and gets paid thirty days later. Payroll is on
 > Friday. The national average is seventy-three days against thirty-day terms —

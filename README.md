@@ -1,5 +1,12 @@
 # Equilibrium
 
+> **AI can recommend a payment. Equilibrium decides whether it is safe enough
+> to execute.**
+
+The model proposes. Deterministic policy constrains. Humans authorize. The
+ledger proves what happened, even when a payment provider times out or sends
+the same webhook twice.
+
 **Small suppliers go broke waiting to get paid — not because they lack revenue.**
 
 A supplier delivers goods on Monday and gets paid 30 days later. Payroll is on

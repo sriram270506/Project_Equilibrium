@@ -35,21 +35,23 @@ export default function LandingPage() {
             fintech landing page.
           */}
           <h1 className="display mt-5 max-w-4xl text-[42px] leading-[1.05] text-ink-strong sm:text-[60px]">
-            Small suppliers go broke waiting to get paid.
-            <span className="block text-brand"> Not because they lack revenue.</span>
+            AI can recommend a payment.
+            <span className="block text-brand">
+              Equilibrium decides whether it is safe enough to execute.
+            </span>
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-muted">
-            A supplier delivers goods on Monday and gets paid 30 days later.
-            Payroll is on Friday. Payment delays can push otherwise-healthy
-            MSMEs into a cash-flow crisis.
+            The model proposes. Deterministic policy constrains. Humans
+            authorize. The ledger proves what happened, even when a payment
+            provider times out or sends the same webhook twice.
           </p>
 
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-ink-muted">
             <strong className="font-semibold text-ink-strong">Equilibrium</strong>{" "}
-            predicts which suppliers are about to run short, offers them their
-            own money early at a fair price, and then moves that money with the
-            reliability guarantees a bank requires.
+            predicts which suppliers are about to run short, because small
+            suppliers can go broke waiting to get paid even when they have
+            healthy revenue.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
