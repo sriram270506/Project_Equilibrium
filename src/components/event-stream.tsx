@@ -45,6 +45,32 @@ const ACTOR_LABEL: Record<string, string> = {
   MODEL: "model",
 };
 
+/**
+ * Merge a page of polled events into the feed.
+ *
+ * Extracted as a pure function so the part that actually broke can be tested
+ * without a DOM. Two overlapping polls used to append the same rows twice,
+ * which React reported as duplicate keys; the fix has to hold no matter how
+ * many times it is called with the same input, and that is a property worth
+ * asserting rather than eyeballing.
+ *
+ * `incoming` arrives oldest-first from the API and is never mutated.
+ */
+export function mergeEvents(
+  previous: StreamEvent[],
+  incoming: StreamEvent[],
+  limit: number
+): StreamEvent[] {
+  if (incoming.length === 0) return previous;
+
+  const seen = new Set(previous.map((e) => e.sequence));
+  // Sequence is unique in the audit chain, so it is the identity here.
+  const fresh = [...incoming].reverse().filter((e) => !seen.has(e.sequence));
+  if (fresh.length === 0) return previous;
+
+  return [...fresh, ...previous].slice(0, limit);
+}
+
 export function EventStream({
   pollMs = 4000,
   limit = 25,
@@ -59,7 +85,21 @@ export function EventStream({
   // without re-creating the interval on every tick.
   const highestSeen = useRef(0);
 
+  /*
+   * Guards against two polls being in flight at once.
+   *
+   * Without it, both read `highestSeen.current` before either writes it, both
+   * ask the API for everything since the same sequence, and both prepend the
+   * same rows - which React reports as duplicate keys. StrictMode's double
+   * effect invocation makes this fire on every mount in development, but it is
+   * a real race in production too: any response slower than the poll interval
+   * overlaps the next tick.
+   */
+  const inFlight = useRef(false);
+
   const poll = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       const res = await fetch(
         `/api/events/stream?since=${highestSeen.current}&limit=${limit}`,
@@ -80,13 +120,21 @@ export function EventStream({
         ...incoming.map((e) => e.sequence)
       );
 
-      setEvents((previous) => {
-        // Newest first for reading; cap so the list cannot grow unbounded.
-        const merged = [...incoming.reverse(), ...previous];
-        return merged.slice(0, limit);
-      });
+      /*
+       * The merge is pure and never mutates `incoming`.
+       *
+       * The previous version called `incoming.reverse()` INSIDE the state
+       * updater - mutating the response array from a function React treats as
+       * pure and may invoke more than once. A second invocation reversed it
+       * again and silently put the feed back in the wrong order, a bug that
+       * would only ever surface as "the activity list is sometimes upside
+       * down".
+       */
+      setEvents((previous) => mergeEvents(previous, incoming, limit));
     } catch {
       setError("Could not reach the API.");
+    } finally {
+      inFlight.current = false;
     }
   }, [limit]);
 
