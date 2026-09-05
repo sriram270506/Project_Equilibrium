@@ -164,22 +164,47 @@ export function isUsableReference(raw: string): boolean {
   return normalised.length > 0 && !REFERENCE_PLACEHOLDERS.has(normalised);
 }
 
-/** DETERMINISTIC. Company names differ cosmetically across systems. */
+/**
+ * DETERMINISTIC. Company names differ cosmetically across systems.
+ *
+ * Case, punctuation and whitespace only. It used to strip corporate suffixes
+ * (PVT, LTD, CORP) as well, and the adversarial set showed why that was a hole
+ * rather than a convenience: "Orbit Kitchenware Ltd" and "Orbit Kitchenware
+ * Pvt Ltd" are two separately registered companies, and dropping the suffix
+ * made them the same string. The one check standing between us and paying the
+ * wrong company could not see the difference, and cleared twelve of them at
+ * full confidence.
+ *
+ * A suffix is not noise on a company name. It is part of the legal identity.
+ */
 export function normaliseParty(raw: string): string {
-  return (
-    raw
-      .toUpperCase()
-      /*
-       * Suffixes are stripped as whole words, BEFORE punctuation is removed,
-       * so the word boundaries still have something to anchor against. Without
-       * them "CO" matches inside "COROMANDEL" and two unrelated companies
-       * normalise to the same string - which, in the one function whose job is
-       * deciding whether the right party was paid, would turn a safety check
-       * into a source of false matches.
-       */
-      .replace(/\b(PVT|PRIVATE|LTD|LIMITED|LLP|INC|CORP|CO)\b/g, "")
-      .replace(/[^A-Z0-9]/g, "")
-  );
+  return raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+export type PartyAgreement = "AGREE" | "ABSENT" | "DIFFER";
+
+/**
+ * Compare two party names, conservatively.
+ *
+ * Three outcomes rather than a boolean, because "the provider sent us no
+ * beneficiary at all" and "the provider paid someone else" are different
+ * findings with different remedies, and collapsing them meant a missing field
+ * was reported to an operator as a wrong-payee incident.
+ *
+ * Anything short of an exact match after normalisation is DIFFER. That is
+ * deliberately strict: it means an abbreviated trading name gets escalated
+ * rather than cleared. The asymmetry is the point - over-escalating costs an
+ * operator a minute, while asserting two names are the same company on a fuzzy
+ * basis is how money reaches the wrong account.
+ */
+export function compareParties(
+  ours: string,
+  theirs: string
+): PartyAgreement {
+  const a = normaliseParty(ours);
+  const b = normaliseParty(theirs);
+  if (b.length === 0 || a.length === 0) return "ABSENT";
+  return a === b ? "AGREE" : "DIFFER";
 }
 
 /**
@@ -288,16 +313,22 @@ export function scoreCandidate(
    * auto-resolved at 100% confidence. Every field the matcher looked at said
    * the record was correct. It was not looking at the only field that mattered.
    */
-  const beneficiaryAgreed =
-    normaliseParty(internal.supplierName) ===
-    normaliseParty(external.beneficiaryName);
+  const beneficiary = compareParties(
+    internal.supplierName,
+    external.beneficiaryName
+  );
   comparisons.push({
     field: "beneficiary",
     internalValue: internal.supplierName,
-    externalValue: external.beneficiaryName,
-    agreed: beneficiaryAgreed,
+    externalValue: external.beneficiaryName || "(absent)",
+    agreed: beneficiary === "AGREE",
     weight: 20,
-    note: beneficiaryAgreed ? undefined : "Money went to a different party",
+    note:
+      beneficiary === "ABSENT"
+        ? "Settlement row carries no beneficiary"
+        : beneficiary === "DIFFER"
+          ? "Named party does not match"
+          : undefined,
   });
 
   const earned = comparisons.reduce(
@@ -582,10 +613,31 @@ export function processRecord(record: BenchmarkRecord): ControllerDecision {
    * counterparty, but money sent to the wrong party is gone until they return
    * it voluntarily.
    */
-  if (
-    normaliseParty(internal.supplierName) !==
-    normaliseParty(bestExternal.beneficiaryName)
-  ) {
+  const partyCheck = compareParties(
+    internal.supplierName,
+    bestExternal.beneficiaryName
+  );
+
+  /*
+   * A missing beneficiary is a data-quality problem, not a wrong-payee
+   * incident. Reporting it as COUNTERPARTY_MISMATCH named a specific and
+   * alarming cause when the truth was only that a field was absent, and sent
+   * the operator to raise a recall on a payment that may well be correct.
+   */
+  if (partyCheck === "ABSENT") {
+    return escalate(
+      record,
+      "INVALID_REFERENCE",
+      "The settlement row names no beneficiary, so the payee cannot be confirmed.",
+      "Request an enriched settlement file from the provider. Do not treat this as a wrong payment until the beneficiary is known.",
+      "Reference, amount and bank identifier agree, but the field that says who was actually paid is empty. That is not evidence the money went astray - it is the absence of evidence that it did not.",
+      best.confidence,
+      best.comparisons,
+      trace
+    );
+  }
+
+  if (partyCheck === "DIFFER") {
     return escalate(
       record,
       "COUNTERPARTY_MISMATCH",

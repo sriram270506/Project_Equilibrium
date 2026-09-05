@@ -11,6 +11,7 @@ import {
   normaliseReference,
   normaliseParty,
   isUsableReference,
+  compareParties,
   scoreCandidate,
   THRESHOLDS,
 } from "./controller";
@@ -92,12 +93,37 @@ describe("normalisation", () => {
     expect(isUsableReference("EQB-2026-00042")).toBe(true);
   });
 
-  it("ignores corporate suffixes when comparing parties", () => {
-    expect(normaliseParty("Aarav Industrial Pvt Ltd")).toBe(
-      normaliseParty("AARAV INDUSTRIAL")
+  it("folds only case, punctuation and whitespace on a party name", () => {
+    expect(normaliseParty("Aarav Industrial Components")).toBe(
+      normaliseParty("  aarav-industrial, components ")
     );
     expect(normaliseParty("Aarav Industrial")).not.toBe(
       normaliseParty("Kaveri Logistics")
+    );
+  });
+
+  it("does NOT strip corporate suffixes", () => {
+    /*
+     * This previously did, and the adversarial set showed why that was a hole:
+     * "Orbit Kitchenware Ltd" and "Orbit Kitchenware Pvt Ltd" are two
+     * separately registered companies. Dropping the suffix made them the same
+     * string, and the controller cleared twelve payments to the wrong entity
+     * at full confidence. A suffix is part of a legal identity, not noise.
+     */
+    expect(normaliseParty("Orbit Kitchenware Ltd")).not.toBe(
+      normaliseParty("Orbit Kitchenware Pvt Ltd")
+    );
+  });
+
+  it("separates an absent beneficiary from a different one", () => {
+    // Different findings, different remedies. Collapsing them reported a
+    // missing field to an operator as a wrong-payee incident.
+    expect(compareParties("Aarav Industrial", "")).toBe("ABSENT");
+    expect(compareParties("Aarav Industrial", "Kaveri Logistics")).toBe(
+      "DIFFER"
+    );
+    expect(compareParties("Aarav Industrial", "AARAV  INDUSTRIAL")).toBe(
+      "AGREE"
     );
   });
 });

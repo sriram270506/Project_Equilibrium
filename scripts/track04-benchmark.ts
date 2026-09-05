@@ -30,6 +30,13 @@ import {
   runAndRecord,
 } from "../src/lib/track04/run-service";
 import { prisma } from "../src/lib/prisma";
+import {
+  buildAdversarialSet,
+  attackCatalogue,
+  robustnessLadder,
+  ADVERSARIAL_VERSION,
+  ADVERSARIAL_SEED,
+} from "../src/lib/track04/adversarial";
 import { loadEnv } from "../src/lib/load-env";
 
 // Must run before anything reads process.env.
@@ -294,6 +301,142 @@ async function main() {
   );
 
   printExceptions(heldOutReport);
+
+  /* ------------------------------------------------------ adversarial */
+
+  heading("Adversarial set — attacking the controller's assumptions");
+  console.log(
+    "  These cases were written by reading the controller's code and asking"
+  );
+  console.log(
+    "  what it ASSUMES, not by asking what goes wrong on a reconciliation"
+  );
+  console.log(
+    "  desk. That is still not an independent author, and a defect class"
+  );
+  console.log(
+    "  nobody can imagine remains invisible - but it is the difference"
+  );
+  console.log(
+    "  between testing what the controller was built for and testing where"
+  );
+  console.log("  it breaks. It is expected to score below the main benchmark.");
+  console.log("");
+
+  const adversarial = buildAdversarialSet(ADVERSARIAL_SEED);
+  const advReport = evaluate(adversarial, {
+    datasetVersion: ADVERSARIAL_VERSION,
+    datasetSeed: ADVERSARIAL_SEED,
+    split: "HELD_OUT",
+  });
+
+  console.log(`  Set          ${ADVERSARIAL_VERSION} (seed ${ADVERSARIAL_SEED})`);
+  console.log(`  Records      ${advReport.recordsProcessed}`);
+  console.log(
+    `  Match rate   ${pct(advReport.matchRate)}  (main benchmark ${pct(heldOutReport.matchRate)})`
+  );
+  console.log(
+    `  False resolutions  ${advReport.falseResolutions} - cleared something that needed a human`
+  );
+  console.log(
+    `  Missed matches     ${advReport.missedMatches} - escalated something safe to clear`
+  );
+  console.log(
+    `  Wrong reason       ${advReport.wrongExceptionTypes} - escalated, but named the wrong cause`
+  );
+
+  console.log("");
+  console.log("  Where it breaks, by attack");
+  for (const b of advReport.byLabel) {
+    console.log(
+      `    ${b.key.padEnd(22)} ${String(b.correct).padStart(3)}/${String(b.total).padEnd(3)} ${pct(b.accuracy).padStart(7)}`
+    );
+  }
+
+  console.log("");
+  if (advReport.falseResolutions === 0 && advReport.missedMatches > 0) {
+    console.log(
+      "  Every surviving failure is OVER-escalation: the controller asks for a"
+    );
+    console.log(
+      "  human on records a person would have cleared. Two classes account for"
+    );
+    console.log(
+      "  all of it - an abbreviated trading name, and a settlement nine days"
+    );
+    console.log(
+      "  late with no bank reference. Both are deliberately left failing. The"
+    );
+    console.log(
+      "  fix in each case is to assert sameness on weaker evidence, and that is"
+    );
+    console.log(
+      "  the trade that put twelve payments into the wrong company's account"
+    );
+    console.log("  before this set was written.");
+    console.log("");
+  }
+  console.log("  What each attack targets");
+  rule("-");
+  for (const a of attackCatalogue()) {
+    console.log(`  ${a.kind} (${a.count})`);
+    for (const line of wrap(a.attack, 68)) console.log(`    ${line}`);
+    console.log("");
+  }
+
+  /* -------------------------------------------------------- robustness */
+
+  heading("Robustness — cosmetic degradation of the main dataset");
+  console.log(
+    "  Every perturbation below is presentational: the ground truth does not"
+  );
+  console.log(
+    "  move, so a correct system's answers should not either. Any fall is the"
+  );
+  console.log(
+    "  controller being brittle about how data is written rather than what it"
+  );
+  console.log("  says.");
+  console.log("");
+
+  let worstFalseResolutions = 0;
+  for (const rung of robustnessLadder(heldOut)) {
+    const r = evaluate(rung.records, {
+      datasetVersion: DATASET_VERSION,
+      datasetSeed: DATASET_SEED,
+      split: "HELD_OUT",
+    });
+    worstFalseResolutions = Math.max(worstFalseResolutions, r.falseResolutions);
+    console.log(
+      `  ${rung.label.padEnd(26)} ${pct(r.matchRate).padStart(7)}   ` +
+        `false res. ${String(r.falseResolutions).padStart(2)}   missed ${String(r.missedMatches).padStart(3)}`
+    );
+  }
+
+  console.log("");
+  if (worstFalseResolutions === 0) {
+    console.log(
+      "  The match rate falls, and every point of that fall is OVER-escalation."
+    );
+    console.log(
+      "  False resolutions stay at zero on every rung: as the data gets worse"
+    );
+    console.log(
+      "  the controller asks for a human more often rather than getting things"
+    );
+    console.log(
+      "  wrong more often. That is the direction a finance system should fail in,"
+    );
+    console.log("  and it is the property worth claiming here.");
+  } else {
+    console.log(
+      `  WARNING: degraded data produced ${worstFalseResolutions} false resolution(s).`
+    );
+    console.log(
+      "  The controller gets things WRONG under noise rather than merely asking"
+    );
+    console.log("  for help. That is the failure direction that costs money.");
+  }
 
   /* ------------------------------------------------- ledger correctness */
 
