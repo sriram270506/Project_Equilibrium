@@ -15,6 +15,10 @@
 
 import { createHmac } from "crypto";
 import { razorpayFromEnv } from "../src/lib/payments/razorpay-adapter";
+import { loadEnv } from "../src/lib/load-env";
+
+// Must run before anything reads process.env.
+loadEnv();
 
 let passed = 0;
 let failed = 0;
@@ -126,11 +130,34 @@ async function main() {
   /* ------------------------------------------- unknown object handling */
   console.log("\n5. Missing objects are a finding, not a crash\n");
 
-  const missing = await adapter.getOperation("order_DoesNotExist000");
+  /*
+   * A WELL-FORMED id that does not exist.
+   *
+   * This used to pass "order_DoesNotExist000", which Razorpay rejects with a
+   * 400 "is not a valid id" rather than a 404 — so the check crashed instead of
+   * testing anything. The distinction is real and worth keeping: a malformed id
+   * is a programming error and should throw, while a well-formed id with no
+   * object behind it is a reconciliation finding and should come back null.
+   * Reconciliation only ever looks up ids it previously stored, so the second
+   * case is the one that happens in production.
+   */
+  const missing = await adapter.getOperation("order_ZZZZZZZZZZZZZZ");
   check(
-    "A non-existent object returns null rather than throwing",
+    "A well-formed but absent object returns null rather than throwing",
     missing === null,
     "reconciliation reports MISSING_EXTERNAL"
+  );
+
+  let malformedThrew = false;
+  try {
+    await adapter.getOperation("order_DoesNotExist000");
+  } catch {
+    malformedThrew = true;
+  }
+  check(
+    "A malformed id throws rather than being reported as missing",
+    malformedThrew,
+    "a bad id is a bug on our side, not a finding about the provider"
   );
 
   /* --------------------------------------------------- webhook signing */

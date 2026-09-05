@@ -38,6 +38,10 @@ import { scopedQueries } from "../src/lib/tenancy/scoped-queries";
 import { resolveInternalTenantId } from "../src/lib/tenancy/constants";
 import { processInvoice } from "../src/lib/invoices/pipeline";
 import { runFinanceController } from "../src/lib/controller/finance-controller";
+import { loadEnv } from "../src/lib/load-env";
+
+// Must run before anything reads process.env.
+loadEnv();
 
 const prisma = new PrismaClient();
 

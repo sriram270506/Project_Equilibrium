@@ -344,10 +344,34 @@ export class RazorpayAdapter implements PaymentProvider {
         timestamp: new Date(),
       };
     } catch (error) {
-      // A 404 means Razorpay has no such object - a real reconciliation finding,
-      // not an error. Everything else propagates.
-      if (error instanceof RazorpayError && error.httpStatus === 404) {
-        return null;
+      /*
+       * "Razorpay has no such object" is a reconciliation finding, not an
+       * error. Everything else propagates.
+       *
+       * This checked only for a 404, which is what the REST convention says
+       * and what the mock provider returns. Razorpay does not do that. Running
+       * `npm run razorpay:check` against the live test API showed it answers a
+       * well-formed but absent order id with:
+       *
+       *   400 BAD_REQUEST_ERROR  "The id provided does not exist"
+       *
+       * So reconciliation would have THROWN on exactly the case it exists to
+       * detect - a payment the provider has no record of - instead of raising
+       * MISSING_EXTERNAL. The mock could never have caught this, because the
+       * mock was written to the same wrong assumption as the adapter.
+       *
+       * The description is load-bearing rather than the status code, because a
+       * MALFORMED id also returns 400, with "... is not a valid id". That one
+       * is a bug on our side and must keep throwing: silently reporting a
+       * mistyped reference as "the provider has no record" would turn our own
+       * error into a finding about someone else.
+       */
+      if (error instanceof RazorpayError) {
+        const absent =
+          error.httpStatus === 404 ||
+          (error.httpStatus === 400 &&
+            /does not exist/i.test(error.message));
+        if (absent) return null;
       }
       throw error;
     }

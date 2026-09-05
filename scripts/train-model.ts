@@ -29,6 +29,10 @@ import {
   calibrationReport,
   KNOWN_DIVERGENCES,
 } from "../src/lib/benchmark/population-calibration";
+import { loadEnv } from "../src/lib/load-env";
+
+// Must run before anything reads process.env.
+loadEnv();
 
 /* ------------------------------------------------------------ RNG (seeded) */
 

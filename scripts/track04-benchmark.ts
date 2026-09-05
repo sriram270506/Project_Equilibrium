@@ -30,6 +30,10 @@ import {
   runAndRecord,
 } from "../src/lib/track04/run-service";
 import { prisma } from "../src/lib/prisma";
+import { loadEnv } from "../src/lib/load-env";
+
+// Must run before anything reads process.env.
+loadEnv();
 
 const rupees = (paise: number) =>
   "Rs " + (paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 });
