@@ -134,7 +134,7 @@ export const THRESHOLDS = {
 export function normaliseReference(raw: string): string {
   return raw
     .toUpperCase()
-    .replace(/^RZP[\/\-]/, "")
+    .replace(/^RZP[/-]/, "")
     .replace(/[^A-Z0-9]/g, "");
 }
 
