@@ -63,6 +63,11 @@ const SECTIONS: Array<{
         hint: "Chargeback response drafts",
       },
       {
+        href: "/dashboard/track04",
+        label: "Track 04 benchmark",
+        hint: "546 labelled records, scored",
+      },
+      {
         href: "/dashboard/model",
         label: "Model card",
         hint: "Accuracy and limits",

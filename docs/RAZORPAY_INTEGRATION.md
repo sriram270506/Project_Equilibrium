@@ -102,7 +102,7 @@ that is not idempotent silently doubles its accounting.
 
 | Path | Status |
 |---|---|
-| Mock provider, full lifecycle incl. injected failures | **Exercised** — 48 end-to-end checks |
+| Mock provider, full lifecycle incl. injected failures | **Exercised** — 49 end-to-end checks |
 | HMAC signature verification | **Exercised** — 26 unit tests |
 | Replay-window rejection | **Exercised** |
 | Duplicate-event deduplication | **Exercised** — verified concurrent |

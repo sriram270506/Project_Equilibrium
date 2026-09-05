@@ -182,6 +182,25 @@ export function normaliseParty(raw: string): string {
   );
 }
 
+/**
+ * Paise rendered as rupees.
+ *
+ * Every amount that reaches a human goes through this. Reason strings used to
+ * carry raw paise - "differs by 6398247 paise" - which is technically exact
+ * and practically unreadable: the reviewer has to shift a decimal point in
+ * their head before they can tell whether it is a rounding error or sixty-four
+ * thousand rupees.
+ */
+export function formatPaiseAsRupees(paise: number): string {
+  return (
+    "Rs " +
+    (paise / 100).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  );
+}
+
 function daysBetween(a: string, b: string): number {
   return Math.abs(
     Math.round((Date.parse(a) - Date.parse(b)) / 86400000)
@@ -240,13 +259,13 @@ export function scoreCandidate(
     THRESHOLDS.amountTolerancePaise;
   comparisons.push({
     field: "amount",
-    internalValue: String(internal.amountPaise),
-    externalValue: String(external.amountPaise),
+    internalValue: formatPaiseAsRupees(internal.amountPaise),
+    externalValue: formatPaiseAsRupees(external.amountPaise),
     agreed: amountAgreed,
     weight: 25,
     note: amountAgreed
       ? undefined
-      : `Differs by ${Math.abs(internal.amountPaise - external.amountPaise)} paise`,
+      : `Differs by ${formatPaiseAsRupees(Math.abs(internal.amountPaise - external.amountPaise))}`,
   });
 
   const dateAgreed =
@@ -584,7 +603,7 @@ export function processRecord(record: BenchmarkRecord): ControllerDecision {
     return escalate(
       record,
       "AMOUNT_MISMATCH",
-      `Settled amount differs from the instruction by ${amountDelta} paise.`,
+      `Settled amount differs from the instruction by ${formatPaiseAsRupees(amountDelta)}.`,
       "Confirm the settled figure with the provider and post a correcting entry. Do not clear the original.",
       `The records refer to the same payment — reference and bank identifier agree — but the amounts do not. The tolerance is zero paise deliberately: a payment that settled short is a different payment, and a tolerance wide enough to absorb this is wide enough to absorb a real loss at volume.`,
       best.confidence,
@@ -615,7 +634,7 @@ export function processRecord(record: BenchmarkRecord): ControllerDecision {
     return escalate(
       record,
       "TAX_MISMATCH",
-      `Gross amounts agree but the tax component differs by ${taxDelta} paise.`,
+      `Gross amounts agree but the tax component differs by ${formatPaiseAsRupees(taxDelta)}.`,
       "Reconcile the tax split against the invoice before filing. The gross figure is not the number that goes on a GST return.",
       "A matcher that compares totals would clear this record. The totals are not the problem — the split is, and it feeds a statutory filing.",
       best.confidence,

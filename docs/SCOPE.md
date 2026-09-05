@@ -86,6 +86,6 @@ The correctness, bounded-controller, and reliability machinery is real and testa
 the counterparty, and the business case are not. This is a working prototype of
 a payment-operations control layer, evaluated against its own simulator.
 
-`npm run demo:verify` checks 39 invariants across every "Real" row above. It
+`npm run demo:verify` checks 49 invariants across every "Real" row above. It
 cannot check anything in the other two tables, and no amount of engineering
 would let it.

@@ -74,7 +74,7 @@ npm run demo:verify
 
 This drives the real services end to end — scores every supplier, approves and
 pays, clears a maker-checker gate, injects a provider timeout, replays a
-webhook, reconciles, and checks the books — asserting **48 invariants** and
+webhook, reconciles, and checks the books — asserting **49 invariants** and
 exiting non-zero if any fails. The invoice/controller path is also covered by
 duplicate-upload, arithmetic-mismatch, similar-invoice, and controller-audit
 checks.

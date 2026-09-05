@@ -32,7 +32,7 @@ const STEPS: Array<{
   {
     id: "reset",
     title: "Start from a clean slate",
-    summary: "Six suppliers with 30 days of cash-flow history.",
+    summary: "Twelve suppliers with 30 days of cash-flow history.",
     act: "Setup",
   },
   {

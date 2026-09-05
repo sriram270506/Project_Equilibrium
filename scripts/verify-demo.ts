@@ -41,6 +41,15 @@ import { runFinanceController } from "../src/lib/controller/finance-controller";
 
 const prisma = new PrismaClient();
 
+/**
+ * How many checks this verifier is expected to run.
+ *
+ * Quoted by README.md, docs/SCOPE.md, docs/RUNBOOK.md and
+ * docs/RAZORPAY_INTEGRATION.md. It is asserted at the end of the run, so those
+ * documents cannot drift away from reality without this failing.
+ */
+const DECLARED_CHECK_COUNT = 49;
+
 let passed = 0;
 let failed = 0;
 const failures: string[] = [];
@@ -677,6 +686,32 @@ async function main() {
   console.log("\n" + "=".repeat(46));
   console.log(`  ${passed} passed, ${failed} failed`);
   console.log("=".repeat(46));
+
+  /*
+   * The total is asserted, not merely printed.
+   *
+   * Three documents quoted three different counts - 48, 39 and 28 - because
+   * the number lived in prose and drifted every time a check was added. Worse,
+   * a check that stops RUNNING does not fail; it silently disappears and the
+   * total quietly shrinks. That is exactly what happened when every offer
+   * drifted above the dual-approval threshold and two webhook checks vanished
+   * from the run without anything going red.
+   *
+   * Now the count is a claim the verifier makes about itself. Add or remove a
+   * check and this fails until the constant is updated, which forces the
+   * documented number to be updated with it.
+   */
+  const total = passed + failed;
+  if (total !== DECLARED_CHECK_COUNT) {
+    console.log(
+      `\nCHECK COUNT DRIFT: ran ${total} checks, expected ${DECLARED_CHECK_COUNT}.\n` +
+        "  A check was added, removed, or silently skipped. If the change was\n" +
+        "  intended, update DECLARED_CHECK_COUNT and every document that quotes\n" +
+        "  it. If it was not, a check stopped running without failing."
+    );
+    process.exitCode = 1;
+    return;
+  }
 
   if (failed > 0) {
     console.log("\nFailed checks:");

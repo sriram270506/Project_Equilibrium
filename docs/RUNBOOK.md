@@ -33,7 +33,7 @@ Copy `.env.example` to `.env`. The app runs with no changes.
 ```bash
 npm ci                # postinstall generates the Prisma client
 npm run db:setup      # generate + push schema + seed
-npm run demo:verify   # 48 checks, should all pass
+npm run demo:verify   # 49 checks, should all pass
 npm run dev
 ```
 

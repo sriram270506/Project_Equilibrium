@@ -210,6 +210,17 @@ function drawAmountPaise(ctx: Ctx): number {
   return Math.max(Math.round(invoiceRupees * 100), 50_000);
 }
 
+/** Paise as rupees, for the human-readable ground-truth notes. */
+function rupees(paise: number): string {
+  return (
+    "Rs " +
+    (paise / 100).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  );
+}
+
 function makeUtr(ctx: Ctx): string {
   const digits = "0123456789";
   let s = "UTR";
@@ -351,8 +362,8 @@ function buildRecord(
       materialityPaise = deltaPaise;
       note =
         spec.difficulty === "HARD"
-          ? `Short-settled by ${deltaPaise} paise. Small enough to look like rounding, large enough to be real money at volume.`
-          : `Provider settled ${deltaPaise} paise less than instructed.`;
+          ? `Short-settled by ${rupees(deltaPaise)}. Small enough to look like rounding, large enough to be real money at volume.`
+          : `Provider settled ${rupees(deltaPaise)} less than instructed.`;
       break;
     }
 
