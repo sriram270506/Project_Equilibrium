@@ -28,7 +28,7 @@
 |---------|--------|----------------------|
 | **Live Webhook Signature Verification** | Would require real provider | Implement in `razorpay-adapter.ts` |
 | **Key Rotation** | Not needed for demo | Add to secrets manager integration |
-| **Multi-Tenant Isolation** | Single-operator demo | Add tenant context to Prisma queries |
+| **Multi-Tenant Isolation** | Scoped application queries and tenant-aware roles | Add database row-level security for defense in depth |
 | **Rate Limiting** | Not needed for demo | Add middleware (express-rate-limit) |
 | **HTTPS/TLS Enforcement** | Dev server doesn't require | Enable in nginx/load balancer |
 | **API Key Authentication** | Demo uses operator ID | Add JWT or OAuth2 |
@@ -66,7 +66,7 @@
 - Demo operator ID is public
 - Secrets can be stored in `.env.local` safely (not deployed)
 - No real rate limiting
-- No multi-tenant isolation
+- No database row-level security; isolation relies on scoped application queries
 - No formal audit trail compliance
 
 ### For Production Deployment

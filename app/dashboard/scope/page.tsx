@@ -23,6 +23,7 @@ export default function ScopePage() {
             <li>• Audit event logging</li>
             <li>• Dispute evidence validation</li>
             <li>• Server-side provider integration</li>
+            <li>• Application-layer tenant isolation</li>
           </ul>
         </div>
 
@@ -38,7 +39,6 @@ export default function ScopePage() {
             <li>• Background worker (outbox publisher)</li>
             <li>• Redis Streams event transport</li>
             <li>• Advanced role-based access control</li>
-            <li>• Tenant isolation</li>
           </ul>
         </div>
 
@@ -51,7 +51,7 @@ export default function ScopePage() {
             <li>• Live customer data</li>
             <li>• Real payments to actual accounts</li>
             <li>• Full KYC/AML integration</li>
-            <li>• Real ACID transaction isolation</li>
+            <li>• Production-grade database concurrency and isolation</li>
             <li>• Formal threat model assessment</li>
             <li>• Security audit</li>
             <li>• Performance testing at scale</li>
@@ -78,6 +78,18 @@ export default function ScopePage() {
                 <strong>Event Log:</strong> Durable transport and replay mechanism (not authority)
               </li>
             </ul>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-semibold text-ink-strong mb-3">
+              Tenant Boundary
+            </h3>
+            <p className="text-ink-body">
+              Tenant isolation is enforced by scoped application queries and
+              verified by the demo suite. This prototype does not claim
+              database row-level security, so raw queries must not bypass those
+              helpers.
+            </p>
           </section>
 
           <section>

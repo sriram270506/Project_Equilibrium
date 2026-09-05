@@ -38,7 +38,7 @@ time working out which is which. Everything below is checkable in the code.
 |---|---|---|
 | **Payment provider** | `MockRazorpay` implements the same interface as the live adapter, with injectable failures | The reliability behaviour is real; the counterparty is not. A live adapter exists ([razorpay-adapter.ts](../src/lib/payments/razorpay-adapter.ts)) but is **unverified** until `npm run razorpay:check` passes with test credentials |
 | **Supplier data** | 12 suppliers, 30 days of generated cash-flow observations each | No real business has ever been scored |
-| **Model training data** | 4,000 simulated suppliers with a seven-day forward cash simulation | Features **and** labels come from the same generator. AUC 0.959 measures the model against that simulator, not against real supplier behaviour |
+| **Model training data** | 4,000 simulated suppliers with a seven-day forward cash simulation | Features **and** labels come from the same generator. AUC 0.940 measures the model against that simulator, not against real supplier behaviour |
 | **Provider fees and cost of capital** | Fixed assumptions (25 bps, 800 bps annualised) | Plausible, not sourced from a real rate card |
 | **Risk limits** | Chosen to make the demo exercise every path | Not derived from a supplier cohort or a default-rate model |
 | **Dispute evidence** | One seeded case with deliberately contradictory claims | Extraction from real documents is not implemented |

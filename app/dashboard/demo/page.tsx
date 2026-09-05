@@ -171,6 +171,31 @@ export default function GuidedDemoPage() {
         end.
       </Callout>
 
+      <Card className="mt-4 border-brand/25 bg-brand/[0.05]">
+        <CardHeader
+          eyebrow="The failure movie"
+          title="Recommendation -> approval -> UNKNOWN -> confirmed"
+          hint="The provider can disagree with our last known state; reconciliation is the resolution path."
+        />
+        <CardBody>
+          <ol className="grid gap-2 text-[13px] text-ink-body sm:grid-cols-5">
+            {[
+              ["01", "Recommendation", "Model proposes"],
+              ["02", "Policy + approval", "Human authorizes"],
+              ["03", "Provider timeout", "State becomes UNKNOWN"],
+              ["04", "Webhook replay", "Duplicate changes nothing"],
+              ["05", "Reconciliation", "CONFIRMED and balanced"],
+            ].map(([number, title, detail]) => (
+              <li key={number} className="rounded-md border border-line-soft bg-surface-card p-3">
+                <p className="tabular text-2xs font-semibold text-brand">{number}</p>
+                <p className="mt-1 font-semibold text-ink-strong">{title}</p>
+                <p className="mt-1 text-ink-muted">{detail}</p>
+              </li>
+            ))}
+          </ol>
+        </CardBody>
+      </Card>
+
       <ol className="mt-6 space-y-3">
         {STEPS.map((step, i) => {
           const result = results[step.id];

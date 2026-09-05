@@ -376,7 +376,7 @@ export default function ModelCardPage() {
                 numbers show the model has correctly learned that simulator&apos;s
                 structure and that the training pipeline does not leak. They say
                 nothing about whether real suppliers behave this way. Treat the
-                0.959 as a property of the simulation, not as evidence of
+                {test.auc.toFixed(3)} as a property of the simulation, not as evidence of
                 production predictive power.
               </Callout>
             </CardBody>

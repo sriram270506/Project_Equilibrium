@@ -40,7 +40,7 @@ predicted risk, runway pressure must raise it.
 **Symptom.** Suppliers the model scored as distressed were rejected by policy.
 
 **Cause.** The policy hardcoded an action threshold of `0.5`. The model had
-been calibrated, by recall-weighted F-beta search, to `0.16`. Two numbers, two
+been calibrated, by recall-weighted F-beta search, to `0.15`. Two numbers, two
 files, one concept.
 
 **Fix.** Policy reads `APPROVAL_THRESHOLD` from the model artifact. The number
@@ -80,7 +80,7 @@ asserts an injected timeout actually produces `UNKNOWN`.
 
 ## 5. Two verifier checks silently stopped running
 
-**Symptom.** `npm run demo:verify` printed **48 passed, 0 failed**. It had
+**Symptom.** An earlier `npm run demo:verify` run printed **48 passed, 0 failed**. It had
 printed 48 before. Nothing was red.
 
 **Cause.** The population recalibration moved every offer above the

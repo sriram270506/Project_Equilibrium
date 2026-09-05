@@ -41,8 +41,8 @@ export default function LandingPage() {
 
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-muted">
             A supplier delivers goods on Monday and gets paid 30 days later.
-            Payroll is on Friday. That gap kills otherwise-healthy businesses —
-            and it is the single largest cause of MSME failure in India.
+            Payroll is on Friday. Payment delays can push otherwise-healthy
+            MSMEs into a cash-flow crisis.
           </p>
 
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-ink-muted">

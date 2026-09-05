@@ -18,7 +18,7 @@ export interface PolicyConstraints {
    * (see scripts/train-model.ts), not to a hand-picked 0.5. Policy and model
    * disagreeing about what counts as "at risk" is a silent way to make a
    * carefully calibrated model useless - an earlier version gated at 0.5 while
-   * the model was tuned to act at 0.16, which rejected most genuinely
+  * the model was tuned to act at 0.15, which rejected most genuinely
    * distressed suppliers before a human ever saw them.
    */
   minModelProbability: number;

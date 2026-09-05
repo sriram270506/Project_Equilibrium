@@ -220,10 +220,10 @@ two cannot drift apart — all normalised to roughly [0, 1]):
 | `balanceCoverage` | Cash against a week of outflow | −4.551 |
 | `tenureYears` | Relationship length over five years | +0.066 |
 
-**Held-out performance**: AUC 0.959 (baseline `runway < 7d`: 0.940), recall 95%,
-precision 43% (baseline 23%).
+**Held-out performance**: AUC 0.940 (baseline `runway < 7d`: 0.924), recall 97%,
+precision 44% (baseline 31%).
 
-**Threshold selection.** The action threshold is 0.16, not 0.50. The two errors
+**Threshold selection.** The action threshold is 0.15, not 0.50. The two errors
 are not symmetric — a false positive offers cheap capital to someone who did not
 strictly need it, a false negative means a supplier misses payroll. The
 threshold is chosen by sweeping candidates and maximising a recall-weighted

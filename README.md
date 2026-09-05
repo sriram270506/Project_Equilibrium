@@ -3,8 +3,7 @@
 **Small suppliers go broke waiting to get paid — not because they lack revenue.**
 
 A supplier delivers goods on Monday and gets paid 30 days later. Payroll is on
-Friday. That gap is the single largest cause of MSME failure in India, and it
-has nothing to do with whether the business is any good.
+Friday. Payment delays can push otherwise-healthy MSMEs into a cash-flow crisis.
 
 Equilibrium is an **AI Finance Controller that knows when to act, when to ask,
 and when not to guess.**
@@ -127,7 +126,7 @@ explanation call. Any timeout or invalid output falls back to
 `explanation unavailable`.
 
 ```
-  PASS  Model beats the runway<7d baseline on held-out AUC — 0.959 vs 0.940
+  PASS  Model beats the runway<7d baseline on held-out AUC — 0.940 vs 0.924
   PASS  The maker cannot approve their own payment
   PASS  A timeout is recorded as UNKNOWN, not guessed either way
   PASS  Our view and the provider's genuinely diverge — we say UNKNOWN, provider says CONFIRMED
@@ -138,7 +137,7 @@ explanation call. Any timeout or invalid output falls back to
   PASS  The kill switch refuses new payments while engaged
   PASS  Fetching another tenant's record by id returns nothing
 
-  48 passed, 0 failed
+  49 passed, 0 failed
 ```
 
 ### Retrain the model
@@ -162,14 +161,14 @@ coefficients the application actually scores with.
 
 | Metric | Model | Baseline (`runway < 7 days`) |
 |---|---|---|
-| AUC | **0.959** | 0.940 |
-| Precision | **43%** | 23% |
-| Recall | 95% | 100% |
+| AUC | **0.940** | 0.924 |
+| Precision | **44%** | 31% |
+| Recall | 97% | 100% |
 
 The baseline catches everyone by flagging almost everyone. The model reaches
 comparable recall while making roughly **half as many unnecessary offers**.
 
-**The decision threshold is 0.16, not 0.50.** The two errors do not cost the
+**The decision threshold is 0.15, not 0.50.** The two errors do not cost the
 same: flagging a healthy supplier means offering them cheap capital they did not
 strictly need, while missing a distressed one means they miss payroll. The
 threshold is chosen by sweeping candidate values and maximising a
