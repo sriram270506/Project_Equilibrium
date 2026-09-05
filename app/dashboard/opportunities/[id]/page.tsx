@@ -2,7 +2,6 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Card,
   CardHeader,
@@ -22,6 +21,10 @@ import { DealMathCard } from "@/src/components/deal-math";
 import { RunwayChart } from "@/src/components/runway-chart";
 import { ForecastChart } from "@/src/components/forecast-chart";
 import { RateBenchmarkCard } from "@/src/components/rate-benchmark";
+import {
+  ApprovalEffect,
+  type EffectDelta,
+} from "@/src/components/approval-effect";
 import type { InterventionComparison } from "@/src/lib/forecast/cash-projection";
 import type { RateBenchmark } from "@/src/lib/benchmark/market-data";
 import { PredictionExplanation } from "@/src/lib/ml/explain";
@@ -76,13 +79,13 @@ export default function OfferDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const router = useRouter();
 
   const [data, setData] = useState<OfferDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
   const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [effect, setEffect] = useState<EffectDelta | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -105,21 +108,83 @@ export default function OfferDetailPage({
     load();
   }, [load]);
 
+  /**
+   * Approve, then SHOW THE EFFECT rather than navigating away.
+   *
+   * This used to router.push() straight to the payment page, so the single most
+   * consequential action in the product produced a page transition and nothing
+   * else. State is snapshotted before and after so the panel can show what
+   * actually moved: the journal posted, the portfolio commitment, the
+   * supplier's forecast.
+   */
   async function approve() {
+    if (!data) return;
     setApproving(true);
     setApprovalError(null);
+    setEffect(null);
+
     try {
+      // Snapshot the portfolio before we change it.
+      const beforeRes = await fetch("/api/dashboard", { cache: "no-store" });
+      const beforeJson = await beforeRes.json();
+      const exposureBefore = beforeJson.success
+        ? beforeJson.data.portfolioForecast.peakExposurePaise
+        : 0;
+      const exposureLimit = beforeJson.success
+        ? beforeJson.data.portfolioForecast.dailyLimitPaise
+        : 0;
+
       const res = await fetch(`/api/opportunities/${id}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ operatorId: "priya.raman" }),
       });
       const json = await res.json();
-      if (json.success) {
-        router.push(`/dashboard/payments/${json.data.paymentIntentId}`);
-      } else {
+
+      if (!json.success) {
         setApprovalError(json.error?.message ?? "Approval failed");
+        return;
       }
+
+      // Read back what changed: the journal, and the new portfolio position.
+      const [paymentRes, afterRes] = await Promise.all([
+        fetch(`/api/payments/${json.data.paymentIntentId}`, {
+          cache: "no-store",
+        }),
+        fetch("/api/dashboard", { cache: "no-store" }),
+      ]);
+      const paymentJson = await paymentRes.json();
+      const afterJson = await afterRes.json();
+
+      setEffect({
+        ledgerLegs: paymentJson.success
+          ? paymentJson.data.ledger.entries.map(
+              (e: { accountCode: string; debitPaise: number; creditPaise: number }) => ({
+                accountCode: e.accountCode,
+                debitPaise: e.debitPaise,
+                creditPaise: e.creditPaise,
+              })
+            )
+          : [],
+        ledgerBalanced: paymentJson.success
+          ? paymentJson.data.ledger.balanced
+          : false,
+        exposureBeforePaise: exposureBefore,
+        exposureAfterPaise: afterJson.success
+          ? afterJson.data.portfolioForecast.peakExposurePaise
+          : exposureBefore,
+        exposureLimitPaise: exposureLimit,
+        runwayBeforeDay: data.forecast?.baseline.medianZeroCrossingDay ?? null,
+        runwayAfterDay: data.forecast?.withAdvance.medianZeroCrossingDay ?? null,
+        paymentIntentId: json.data.paymentIntentId,
+        paymentStatus: json.data.status,
+        requiresDualApproval: Boolean(json.data.requiresDualApproval),
+        amountPaise: data.opportunity.expectedBenefitPaise,
+        supplierName: data.supplier.name,
+      });
+
+      // Refresh the page data so the status chip and policy card reflect
+      // the new state without a navigation.
+      await load();
     } catch {
       setApprovalError("Could not reach the API.");
     } finally {
@@ -158,6 +223,12 @@ export default function OfferDetailPage({
           </div>
         }
       />
+
+      {effect ? (
+        <div className="fade-up mb-4">
+          <ApprovalEffect delta={effect} />
+        </div>
+      ) : null}
 
       {approvalError ? (
         <div className="mb-4">
