@@ -46,3 +46,4 @@ yarn-error.log*
 
 # TypeScript incremental build cache - a local artifact, not source.
 *.tsbuildinfo
+benchmark-results/

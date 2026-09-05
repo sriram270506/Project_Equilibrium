@@ -21,7 +21,8 @@
     "ml:ab": "tsx scripts/ab-compare.ts",
     "postinstall": "prisma generate",
     "db:setup": "prisma generate && prisma db push && tsx prisma/seed.ts",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "track04:benchmark": "tsx scripts/track04-benchmark.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
