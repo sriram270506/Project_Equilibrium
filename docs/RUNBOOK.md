@@ -31,15 +31,29 @@ Copy `.env.example` to `.env`. The app runs with no changes.
 ## First run
 
 ```bash
-npm ci
-npx prisma generate
-npx prisma db push
-npm run db:seed
-npm run demo:verify   # 34 checks, should all pass
+npm ci                # postinstall generates the Prisma client
+npm run db:setup      # generate + push schema + seed
+npm run demo:verify   # 48 checks, should all pass
 npm run dev
 ```
 
-`demo:verify` seeds an empty database itself, so the `db:seed` step is optional.
+`demo:verify` seeds an empty database itself, so `db:setup` is optional before
+it — but you need it before `npm run dev` shows any data.
+
+**`npm run dev` deliberately does not run `prisma generate` or `prisma db push`.**
+Two reasons:
+
+1. On Windows, any node process holding `query_engine-windows.dll.node` — a
+   dev server you forgot was running, or one that did not shut down cleanly —
+   makes `prisma generate` fail with `EPERM: operation not permitted, unlink`.
+   Regenerating on every start meant a stale process blocked you from starting
+   a new one at all.
+2. `prisma db push` in `dev` and `build` meant starting the app, or building
+   it, silently altered whatever `DATABASE_URL` pointed at. A build must never
+   mutate a database.
+
+Run `npm run db:setup` when the schema changes. That is the only time you need
+it.
 
 ---
 
@@ -186,7 +200,16 @@ What would be required, stated so the gap is explicit:
 | `npm ci` fails | Node ≥18.18 required; delete `node_modules` and retry |
 | `PrismaClientInitializationError` | `npx prisma generate` |
 | Empty dashboard | `npm run db:seed` |
-| `EPERM` on `prisma generate` (Windows) | Stop the dev server first — it holds the query engine DLL |
+| `EPERM: ... unlink query_engine-windows.dll.node` | A node process holds the Prisma engine. `npm run dev` no longer regenerates, so this only affects `db:setup` and `build` — stop the dev server first (see below) |
 | Every webhook rejected | Set `RAZORPAY_WEBHOOK_SECRET`, or set `RAZORPAY_MODE=mock` |
 | `demo:verify` fails | Read the failing check name; it names the invariant that broke |
-| Port 3000 in use | `npm run dev -- -p 3001` |
+| Port 3000 in use | `npm run dev -- -p 3001`, or stop the holder (below) |
+| Schema changed but types are stale | `npm run db:setup` |
+
+### Stopping a stuck dev server (Windows)
+
+```powershell
+Get-NetTCPConnection -LocalPort 3000 -State Listen |
+  Select-Object -ExpandProperty OwningProcess |
+  ForEach-Object { Stop-Process -Id $_ -Force }
+```
