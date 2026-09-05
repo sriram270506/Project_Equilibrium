@@ -19,6 +19,16 @@
 
 import { writeFileSync } from "fs";
 import { join } from "path";
+import {
+  TURNOVER_FIT,
+  MEAN_COLLECTION_EFFICIENCY,
+  COLLECTION_EFFICIENCY_CONCENTRATION,
+  ASSUMPTIONS,
+  probit,
+  normalCdf,
+  calibrationReport,
+  KNOWN_DIVERGENCES,
+} from "../src/lib/benchmark/population-calibration";
 
 /* ------------------------------------------------------------ RNG (seeded) */
 
@@ -47,6 +57,60 @@ function clamp(x: number, lo: number, hi: number): number {
   return Math.min(Math.max(x, lo), hi);
 }
 
+/**
+ * Gamma sample, Marsaglia-Tsang. Only needed as a building block for Beta,
+ * which is how collection efficiency is drawn — a bounded 0-1 quantity with a
+ * fitted mean is a Beta, not a clamped normal. The old code clamped a normal,
+ * which piles probability mass on the clamp boundaries and quietly distorts
+ * exactly the tail the model is supposed to detect.
+ */
+function gamma(shape: number): number {
+  if (shape < 1) {
+    // Boost: Gamma(a) = Gamma(a+1) * U^(1/a)
+    return gamma(shape + 1) * Math.pow(Math.max(rng(), 1e-12), 1 / shape);
+  }
+  const d = shape - 1 / 3;
+  const c = 1 / Math.sqrt(9 * d);
+  for (;;) {
+    let x: number;
+    let v: number;
+    do {
+      x = normal(0, 1);
+      v = 1 + c * x;
+    } while (v <= 0);
+    v = v * v * v;
+    const u = Math.max(rng(), 1e-12);
+    if (u < 1 - 0.0331 * x * x * x * x) return d * v;
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+  }
+}
+
+/** Beta sample parameterised by mean and concentration, which is how the
+ *  calibration expresses it. */
+function beta(mean: number, concentration: number): number {
+  const a = mean * concentration;
+  const b = (1 - mean) * concentration;
+  const ga = gamma(a);
+  const gb = gamma(b);
+  return ga / (ga + gb);
+}
+
+/**
+ * Lognormal truncated below `floor`, by inverse transform rather than
+ * rejection — exact, and it keeps the run deterministic in the number of RNG
+ * draws consumed, which matters because the seed is what makes training
+ * reproducible.
+ */
+function truncatedLognormal(
+  logMean: number,
+  logSd: number,
+  floor: number
+): number {
+  const cdfAtFloor = normalCdf((Math.log(floor) - logMean) / logSd);
+  const u = cdfAtFloor + rng() * (1 - cdfAtFloor);
+  return Math.exp(logMean + logSd * probit(clamp(u, 1e-9, 1 - 1e-9)));
+}
+
 /* ------------------------------------------------------------- Feature set */
 
 export const FEATURE_NAMES = [
@@ -63,6 +127,11 @@ type Features = Record<FeatureName, number>;
 /**
  * A simulated supplier: a small business with a cash balance, recurring
  * outflows, and receivables that arrive on an unreliable schedule.
+ *
+ * The latent characteristics below are drawn from a population CALIBRATED to
+ * published Indian MSME statistics — see population-calibration.ts. The
+ * previous version drew from hand-chosen constants, which meant the model was
+ * fitted to a market that existed only in this file.
  */
 interface SimulatedSupplier {
   features: Features;
@@ -70,27 +139,91 @@ interface SimulatedSupplier {
   label: number;
   /** Kept for reporting only. */
   daysRunway: number;
+  /** Retained so the population can be checked back against its anchors. */
+  collectionEfficiency: number;
+  annualTurnoverRupees: number;
 }
 
 function simulateSupplier(): SimulatedSupplier {
-  // Latent business characteristics.
-  const dailyOutflow = Math.exp(normal(Math.log(40000), 0.6)); // paise/day
-  const balance = Math.exp(normal(Math.log(dailyOutflow * 8), 1.0));
-  const paymentRegularity = clamp(normal(0.78, 0.16), 0.15, 0.99);
-  const volatility = clamp(normal(0.22, 0.12), 0.02, 0.95);
-  const tenureDays = clamp(Math.round(Math.exp(normal(Math.log(600), 0.9))), 30, 3000);
+  // Firm size, from the lognormal solved against the two published Udyam
+  // quantiles, truncated to firms large enough to hold a financeable invoice.
+  const annualTurnoverRupees = truncatedLognormal(
+    TURNOVER_FIT.logMean,
+    TURNOVER_FIT.logSd,
+    ASSUMPTIONS.financeableTurnoverFloorRupees.value
+  );
 
-  // Expected receivables over the next 7 days, discounted by how reliably
-  // this supplier's customers actually pay on time.
+  // Turnover -> daily operating outflow, in paise.
+  const dailyOutflow =
+    (annualTurnoverRupees * ASSUMPTIONS.outflowShareOfTurnover.value * 100) /
+    365;
+
+  // How much of the receivable rate this firm actually realises. Fitted:
+  // 30-day terms against a 73-day realised cycle.
+  const collectionEfficiency = clamp(
+    beta(MEAN_COLLECTION_EFFICIENCY, COLLECTION_EFFICIENCY_CONCENTRATION),
+    0.05,
+    0.99
+  );
+
+  /*
+   * Working-capital lock-up. A firm on a 73-day collection cycle has more than
+   * twice as much cash trapped in unpaid invoices as one on 30-day terms, so
+   * it holds a thinner free-cash buffer for the same size of business. Scaled
+   * against the fitted mean rather than a new constant, so this introduces no
+   * additional unanchored parameter.
+   */
+  const bufferDays =
+    ASSUMPTIONS.medianBufferDays.value *
+    clamp(collectionEfficiency / MEAN_COLLECTION_EFFICIENCY, 0.25, 2.0);
+
+  const balance = Math.exp(normal(Math.log(dailyOutflow * bufferDays), 1.0));
+  const volatility = clamp(
+    normal(
+      ASSUMPTIONS.cashFlowVolatilityMean.value,
+      ASSUMPTIONS.cashFlowVolatilitySd.value
+    ),
+    0.02,
+    0.95
+  );
+  const tenureDays = clamp(
+    Math.round(
+      Math.exp(normal(Math.log(ASSUMPTIONS.tenureMedianDays.value), 0.9))
+    ),
+    30,
+    3000
+  );
+
+  /*
+   * The probability that a given day's expected receipt actually lands.
+   * Collection efficiency IS that probability: a firm realising 41% of its
+   * invoiced rate is one whose money arrives on 41% of the days it should.
+   */
+  const paymentRegularity = collectionEfficiency;
+
+  // Gross receivables accrue at roughly the rate of outflow for a going
+  // concern; what actually arrives is gated by paymentRegularity below.
   const expectedInflowPerDay = dailyOutflow * clamp(normal(1.02, 0.25), 0.4, 1.8);
 
   // Forward simulate 7 days to derive the ground-truth label.
   let runningBalance = balance;
   let wentNegative = false;
   for (let day = 0; day < 7; day++) {
+    /*
+     * Receipts are lumpy, not smaller. A going concern collecting at 41%
+     * efficiency still collects everything it invoices — it collects it at day
+     * 73 instead of day 30. So the arrival amount is grossed up by 1/p, which
+     * holds the MEAN inflow rate equal to outflow and puts the whole effect of
+     * slow collection into the variance.
+     *
+     * Getting this wrong the other way — scaling the rate down by p — would
+     * make every simulated firm insolvent by construction and the label would
+     * be almost always 1.
+     */
     const inflowArrives = rng() < paymentRegularity;
     const inflow = inflowArrives
-      ? expectedInflowPerDay * clamp(normal(1, volatility), 0, 3)
+      ? (expectedInflowPerDay / paymentRegularity) *
+        clamp(normal(1, volatility), 0, 3)
       : 0;
     const outflow = dailyOutflow * clamp(normal(1, volatility * 0.5), 0.2, 2.5);
     runningBalance += inflow - outflow;
@@ -116,7 +249,13 @@ function simulateSupplier(): SimulatedSupplier {
     tenureYears: clamp(tenureDays / 365 / 5, 0, 1),
   };
 
-  return { features, label: wentNegative ? 1 : 0, daysRunway };
+  return {
+    features,
+    label: wentNegative ? 1 : 0,
+    daysRunway,
+    collectionEfficiency,
+    annualTurnoverRupees,
+  };
 }
 
 /* ------------------------------------------------------------- Logistic fit */
@@ -374,7 +513,34 @@ function main() {
       `base rate ${(all.filter((s) => s.label === 1).length / TOTAL * 100).toFixed(1)}%`
   );
 
-  console.log("Fitting logistic regression…");
+  /*
+   * Does the generated population actually reproduce the published statistics
+   * it claims to be calibrated against? Printed on every run, because a
+   * calibration nobody measures is just a comment.
+   */
+  console.log("\nPopulation calibration (against published Indian MSME data)");
+  const checks = calibrationReport(all);
+  for (const check of checks) {
+    console.log(
+      `  ${check.passed ? "OK  " : "FAIL"} ${check.statistic}\n` +
+        `       published ${check.published.toFixed(3)}  simulated ${check.simulated.toFixed(3)}` +
+        `  (tolerance ±${check.toleranceAbs})`
+    );
+  }
+  if (checks.some((c) => !c.passed)) {
+    throw new Error(
+      "The simulated population no longer matches its published anchors. " +
+        "Either the generator changed or a cited figure was updated — resolve " +
+        "which before trusting anything downstream of this model."
+    );
+  }
+
+  console.log(
+    `\n  Known divergences from secondary published figures: ${KNOWN_DIVERGENCES.length}` +
+      " (see population-calibration.ts — recorded, not tuned away)"
+  );
+
+  console.log("\nFitting logistic regression…");
   const fit = fitLogistic(train);
 
   // Threshold is chosen on TRAINING data only, then reported on held-out data.
@@ -554,13 +720,23 @@ function main() {
     },
     calibrationNote:
       "Fitted on synthetic cash-flow simulations, not on real supplier data. " +
-      "The generating process is a deliberate simplification: seven-day forward " +
-      "simulation with independent daily draws. Treat the probabilities as " +
-      "ordinal risk scores for demonstration, not as calibrated default rates. " +
-      "Any production use requires refitting on real observations, fairness " +
-      "review across supplier segments, and ongoing drift monitoring.",
+      "The POPULATION those simulations draw from is calibrated to published " +
+      "Indian MSME statistics - the firm-size lognormal is solved from two " +
+      "Udyam quantiles (88% below Rs 1 crore turnover, 98.9% micro) and the " +
+      "collection-efficiency Beta is solved so the average realised payment " +
+      "cycle reproduces the 73 days measured by Recordent's Indian SME " +
+      "Receivables Report 2026. See src/lib/benchmark/population-calibration.ts, " +
+      "which also records where the calibration DISAGREES with secondary " +
+      "published figures rather than tuning until it agrees. " +
+      "The generating process remains a deliberate simplification: seven-day " +
+      "forward simulation with independent daily draws. Treat the " +
+      "probabilities as ordinal risk scores for demonstration, not as " +
+      "calibrated default rates. Any production use requires refitting on real " +
+      "observations, fairness review across supplier segments, and ongoing " +
+      "drift monitoring.",
     limitations: [
       "Trained on generated data; no real supplier ever entered this model.",
+      "The population is calibrated to published aggregates, but no real firm's cash flow was observed. Held-out AUC measures how well the model recovers the simulator, not how it would perform on real suppliers.",
       "Assumes daily cash-flow observations are complete and unbiased.",
       "No fairness evaluation across supplier size, geography, or sector.",
       "Does not model correlated shocks - a sector-wide downturn would break the independence assumption.",

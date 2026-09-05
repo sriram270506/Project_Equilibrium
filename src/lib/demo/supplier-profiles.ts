@@ -1,11 +1,19 @@
+import {
+  ASSUMPTIONS,
+  PAYMENT_BEHAVIOUR,
+} from "../benchmark/population-calibration";
+
 /**
  * The cast of the demo.
  *
- * Six suppliers with deliberately different cash-flow shapes, so that scoring
- * them produces a real spread rather than a uniform result. Two are in genuine
- * distress, one is borderline, and three are healthy - which is roughly the mix
- * a marketplace actually sees, and it lets the walkthrough show policy
- * rejecting offers as well as approving them.
+ * Twelve suppliers with deliberately different cash-flow shapes, so that
+ * scoring them produces a real spread rather than a uniform result. Three come
+ * back RECOMMENDED and nine are rejected by policy, which is roughly the mix a
+ * marketplace actually sees and lets the walkthrough show policy refusing
+ * offers as well as approving them.
+ *
+ * This header said "six" while the array held twelve. The count is asserted in
+ * the demo verifier now, so the two cannot drift apart again.
  *
  * Shared by the Prisma seed and the demo reset endpoint so the two can never
  * drift apart.
@@ -17,7 +25,19 @@ export interface SupplierProfile {
   riskTier: "LOW" | "MEDIUM" | "HIGH";
   /** One line of human context for the UI. */
   story: string;
-  /** Cash-flow shape used to generate observations. */
+  /**
+   * Cash-flow shape used to generate observations.
+   *
+   * Sized to the calibrated population in
+   * src/lib/benchmark/population-calibration.ts: each figure below is
+   * `annualTurnover x outflowShare / 365`, placing these twelve firms between
+   * roughly Rs 8 lakh and Rs 19 lakh of annual turnover. That band is chosen
+   * so a supplier here looks like one drawn from the same distribution the
+   * model was trained on. An earlier version used figures around Rs 400/day of
+   * outflow — implying Rs 1.5 lakh of annual turnover — which is smaller than
+   * any firm that would hold a financeable invoice, and made the demo
+   * population incoherent with the training population.
+   */
   shape: {
     /** Typical daily outflow in paise. */
     dailyOutflowPaise: number;
@@ -40,7 +60,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     story:
       "Machine parts for two large OEMs in Pune. Reliable revenue, but both customers pay on 45-day terms and payroll is weekly.",
     shape: {
-      dailyOutflowPaise: 62000,
+      dailyOutflowPaise: 296000,
       endingRunwayDays: 2.4,
       paymentRegularity: 0.55,
       volatility: 0.31,
@@ -54,7 +74,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     story:
       "Truck spares distributor in Coimbatore. Thin margins, lumpy demand, and customers who pay late as a matter of habit.",
     shape: {
-      dailyOutflowPaise: 48000,
+      dailyOutflowPaise: 268000,
       endingRunwayDays: 1.8,
       paymentRegularity: 0.42,
       volatility: 0.44,
@@ -68,7 +88,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     story:
       "Cotton fabric supplier in Surat. A single anchor buyer stretched terms from 30 to 60 days last quarter.",
     shape: {
-      dailyOutflowPaise: 88000,
+      dailyOutflowPaise: 438000,
       endingRunwayDays: 3.1,
       paymentRegularity: 0.48,
       volatility: 0.38,
@@ -82,7 +102,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     story:
       "Corrugated packaging in Chennai. Seasonal, currently between two large orders - borderline rather than distressed.",
     shape: {
-      dailyOutflowPaise: 38000,
+      dailyOutflowPaise: 226000,
       endingRunwayDays: 6.5,
       paymentRegularity: 0.71,
       volatility: 0.26,
@@ -96,7 +116,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     story:
       "Spice grading and packing in Guntur. Harvest-cycle cash flows mean predictable troughs.",
     shape: {
-      dailyOutflowPaise: 54000,
+      dailyOutflowPaise: 293000,
       endingRunwayDays: 5.2,
       paymentRegularity: 0.66,
       volatility: 0.35,
@@ -110,7 +130,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     story:
       "Nuts and bolts for the Rajkot auto cluster. Steady orders, but one buyer disputes invoices routinely.",
     shape: {
-      dailyOutflowPaise: 41000,
+      dailyOutflowPaise: 240000,
       endingRunwayDays: 8.4,
       paymentRegularity: 0.63,
       volatility: 0.29,
@@ -124,7 +144,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     story:
       "FMCG distributor in Jaipur with a broad retail base. Many small customers paying quickly smooths the cash curve.",
     shape: {
-      dailyOutflowPaise: 55000,
+      dailyOutflowPaise: 299000,
       endingRunwayDays: 16,
       paymentRegularity: 0.88,
       volatility: 0.14,
@@ -138,7 +158,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     story:
       "Seafood exporter in Ratnagiri. Letter-of-credit cycles make receipts chunky and hard to time.",
     shape: {
-      dailyOutflowPaise: 96000,
+      dailyOutflowPaise: 473000,
       endingRunwayDays: 9.5,
       paymentRegularity: 0.58,
       volatility: 0.52,
@@ -152,7 +172,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     story:
       "Kitchen equipment for restaurants in Hyderabad. Steady repeat orders and disciplined collections.",
     shape: {
-      dailyOutflowPaise: 44000,
+      dailyOutflowPaise: 253000,
       endingRunwayDays: 13,
       paymentRegularity: 0.85,
       volatility: 0.17,
@@ -166,7 +186,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     story:
       "Commercial printing in Bengaluru. Advance deposits on large jobs keep the balance healthy.",
     shape: {
-      dailyOutflowPaise: 33000,
+      dailyOutflowPaise: 205000,
       endingRunwayDays: 19,
       paymentRegularity: 0.91,
       volatility: 0.12,
@@ -180,7 +200,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     story:
       "Established homeware brand in Noida. Holds a working-capital buffer by policy and collects promptly.",
     shape: {
-      dailyOutflowPaise: 71000,
+      dailyOutflowPaise: 365000,
       endingRunwayDays: 22,
       paymentRegularity: 0.93,
       volatility: 0.09,
@@ -194,7 +214,7 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
     story:
       "Switchgear assembly in Madurai. Long-tenured supplier with the strongest collections on the platform.",
     shape: {
-      dailyOutflowPaise: 67000,
+      dailyOutflowPaise: 350000,
       endingRunwayDays: 26,
       paymentRegularity: 0.95,
       volatility: 0.08,
@@ -205,6 +225,23 @@ export const SUPPLIER_PROFILES: SupplierProfile[] = [
 
 /** Days of observation history generated per supplier. */
 export const OBSERVATION_DAYS = 30;
+
+/**
+ * The receivable a supplier has at stake: daily revenue x the collection cycle.
+ *
+ * Exported so the seed and the verifier compute it the same way. They used to
+ * disagree — the seed derived it from the profile while the verifier passed a
+ * hardcoded Rs 1,50,000 for every supplier — which meant the verifier was
+ * exercising offer sizes that no seeded supplier actually had, and the
+ * maker-checker check silently stopped firing when the two drifted apart.
+ */
+export function receivableAtStakePaise(profile: SupplierProfile): number {
+  const dailyRevenuePaise =
+    profile.shape.dailyOutflowPaise / ASSUMPTIONS.outflowShareOfTurnover.value;
+  return Math.round(
+    dailyRevenuePaise * PAYMENT_BEHAVIOUR.averageRealisedDays.value
+  );
+}
 
 export interface GeneratedObservation {
   observedAt: Date;

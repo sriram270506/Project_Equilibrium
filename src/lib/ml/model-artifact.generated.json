@@ -1,6 +1,6 @@
 {
   "modelVersion": "liquidity-logistic-v2",
-  "trainedAt": "2026-09-03T04:36:45.490Z",
+  "trainedAt": "2026-09-05T04:05:08.002Z",
   "featureNames": [
     "cashFlowVolatility",
     "runwayPressure",
@@ -9,79 +9,80 @@
     "tenureYears"
   ],
   "coefficients": {
-    "cashFlowVolatility": 0.1584069168470133,
-    "runwayPressure": 3.6325930350738713,
-    "paymentIrregularity": 3.021930312000604,
-    "balanceCoverage": -4.551165171425265,
-    "tenureYears": 0.06587167605130559
+    "cashFlowVolatility": -0.16617275756974823,
+    "runwayPressure": 3.4028094907533064,
+    "paymentIrregularity": 3.0610459141642954,
+    "balanceCoverage": -4.379437637296875,
+    "tenureYears": 0.09955827867695792
   },
-  "intercept": -3.856639194650561,
-  "approvalThreshold": 0.16,
+  "intercept": -4.158782393052772,
+  "approvalThreshold": 0.15,
   "training": {
     "totalSamples": 4000,
     "trainSamples": 3000,
     "testSamples": 1000,
     "iterations": 4000,
-    "finalTrainLoss": 0.16081,
+    "finalTrainLoss": 0.21295,
     "seed": 20260902
   },
   "metrics": {
     "train": {
-      "auc": 0.9582518765638032,
-      "accuracy": 0.868,
-      "precision": 0.4059097978227061,
-      "recall": 0.9490909090909091,
-      "f1": 0.5686274509803922,
-      "truePositives": 261,
-      "falsePositives": 382,
-      "trueNegatives": 2343,
-      "falseNegatives": 14,
-      "baseRate": 0.09166666666666666,
-      "threshold": 0.16
+      "auc": 0.9475537424093183,
+      "accuracy": 0.8323333333333334,
+      "precision": 0.4787234042553192,
+      "recall": 0.9719222462203023,
+      "f1": 0.6414825374198146,
+      "truePositives": 450,
+      "falsePositives": 490,
+      "trueNegatives": 2047,
+      "falseNegatives": 13,
+      "baseRate": 0.15433333333333332,
+      "threshold": 0.15
     },
     "test": {
-      "auc": 0.9594785847299814,
-      "accuracy": 0.862,
-      "precision": 0.4291845493562232,
-      "recall": 0.9523809523809523,
-      "f1": 0.591715976331361,
-      "truePositives": 100,
-      "falsePositives": 133,
-      "trueNegatives": 762,
-      "falseNegatives": 5,
-      "baseRate": 0.105,
-      "threshold": 0.16
+      "auc": 0.9397086365171472,
+      "accuracy": 0.804,
+      "precision": 0.43859649122807015,
+      "recall": 0.974025974025974,
+      "f1": 0.6048387096774193,
+      "truePositives": 150,
+      "falsePositives": 192,
+      "trueNegatives": 654,
+      "falseNegatives": 4,
+      "baseRate": 0.154,
+      "threshold": 0.15
     },
     "baseline": {
-      "auc": 0.9403564777866454,
-      "accuracy": 0.644,
-      "precision": 0.227765726681128,
+      "auc": 0.9244343127321851,
+      "accuracy": 0.657,
+      "precision": 0.30985915492957744,
       "recall": 1,
-      "f1": 0.3710247349823322,
-      "truePositives": 105,
-      "falsePositives": 356,
-      "trueNegatives": 539,
+      "f1": 0.47311827956989244,
+      "truePositives": 154,
+      "falsePositives": 343,
+      "trueNegatives": 503,
       "falseNegatives": 0,
-      "baseRate": 0.105,
+      "baseRate": 0.154,
       "threshold": 7
     }
   },
   "negativeControls": {
-    "permutationAucMean": 0.6289,
+    "permutationAucMean": 0.4791,
     "permutationAucRange": [
-      0.1409,
-      0.9451
+      0.1432,
+      0.8698
     ],
     "permutations": 15,
-    "realPredictionSpread": 0.7502,
-    "permutedPredictionSpread": 0.0854,
-    "labelFlipRate": 0.21,
+    "realPredictionSpread": 0.8702,
+    "permutedPredictionSpread": 0.0939,
+    "labelFlipRate": 0.2425,
     "passes": true,
     "note": "Shuffled-label AUC must sit near 0.5. If it does not, the training pipeline is leaking and no other metric here can be trusted. The flip rate shows the label is stochastic rather than a deterministic function of the features - but note that both the features and the label come from the SAME simulator, so these metrics measure the model against that simulator, not against real supplier behaviour."
   },
-  "calibrationNote": "Fitted on synthetic cash-flow simulations, not on real supplier data. The generating process is a deliberate simplification: seven-day forward simulation with independent daily draws. Treat the probabilities as ordinal risk scores for demonstration, not as calibrated default rates. Any production use requires refitting on real observations, fairness review across supplier segments, and ongoing drift monitoring.",
+  "calibrationNote": "Fitted on synthetic cash-flow simulations, not on real supplier data. The POPULATION those simulations draw from is calibrated to published Indian MSME statistics - the firm-size lognormal is solved from two Udyam quantiles (88% below Rs 1 crore turnover, 98.9% micro) and the collection-efficiency Beta is solved so the average realised payment cycle reproduces the 73 days measured by Recordent's Indian SME Receivables Report 2026. See src/lib/benchmark/population-calibration.ts, which also records where the calibration DISAGREES with secondary published figures rather than tuning until it agrees. The generating process remains a deliberate simplification: seven-day forward simulation with independent daily draws. Treat the probabilities as ordinal risk scores for demonstration, not as calibrated default rates. Any production use requires refitting on real observations, fairness review across supplier segments, and ongoing drift monitoring.",
   "limitations": [
     "Trained on generated data; no real supplier ever entered this model.",
+    "The population is calibrated to published aggregates, but no real firm's cash flow was observed. Held-out AUC measures how well the model recovers the simulator, not how it would perform on real suppliers.",
     "Assumes daily cash-flow observations are complete and unbiased.",
     "No fairness evaluation across supplier size, geography, or sector.",
     "Does not model correlated shocks - a sector-wide downturn would break the independence assumption.",

@@ -29,6 +29,10 @@ import { verifyAuditChain } from "../src/lib/audit";
 import { setKillSwitch, getRiskLimits } from "../src/lib/risk/controls";
 import { LIQUIDITY_MODEL } from "../src/lib/ml/model-artifact";
 import { ensureSeeded, clearTransactionalState } from "../src/lib/demo/seed";
+import {
+  SUPPLIER_PROFILES,
+  receivableAtStakePaise,
+} from "../src/lib/demo/supplier-profiles";
 import { OBSERVATION_DAYS } from "../src/lib/demo/supplier-profiles";
 import { scopedQueries } from "../src/lib/tenancy/scoped-queries";
 import { resolveInternalTenantId } from "../src/lib/tenancy/constants";
@@ -137,7 +141,17 @@ async function main() {
       where: { supplierId: supplier.id },
     });
     if (!hasObservation) continue;
-    const result = await evaluateOpportunity(supplier.id, 15000000);
+    /*
+     * Size the offer from the supplier's own profile, exactly as the seed
+     * does. This used to pass a flat Rs 1,50,000 for everyone, which meant the
+     * verifier scored offer sizes no seeded supplier had - and the
+     * dual-approval check below stopped firing without anyone noticing.
+     */
+    const profile = SUPPLIER_PROFILES.find((p) => p.name === supplier.name);
+    const result = await evaluateOpportunity(
+      supplier.id,
+      profile ? receivableAtStakePaise(profile) : 15000000
+    );
     if (result.status === "RECOMMENDED") recommended++;
     else rejected++;
   }
@@ -152,23 +166,54 @@ async function main() {
   /* ---------------------------------------------------- happy-path pay */
   section("4. Approve and pay");
 
-  const firstOffer = await prisma.liquidityOpportunity.findFirst({
-    where: { status: "RECOMMENDED" },
-    orderBy: { predictionProbability: "asc" }, // smallest first, avoids dual-approval
-  });
-  if (!firstOffer) throw new Error("No offer to approve");
+  const riskLimitsForPath = await getRiskLimits();
 
+  /*
+   * The happy path must be a SINGLE-approval payment, so pick an offer below
+   * the dual-approval threshold explicitly rather than hoping the smallest one
+   * happens to be under it. When every recommended offer drifted above the
+   * threshold, this step silently stopped paying anything: the payment stayed
+   * PENDING_APPROVAL, no webhook was ever delivered, and the two webhook replay
+   * checks further down vanished from the run without failing.
+   */
+  const singleApprovalOffer = await prisma.liquidityOpportunity.findFirst({
+    where: {
+      status: "RECOMMENDED",
+      expectedBenefitPaise: { lt: riskLimitsForPath.dualApprovalThresholdPaise },
+    },
+    orderBy: { expectedBenefitPaise: "desc" },
+  });
+
+  check(
+    "An offer below the dual-approval threshold exists to pay outright",
+    singleApprovalOffer !== null,
+    singleApprovalOffer
+      ? `${rupees(singleApprovalOffer.expectedBenefitPaise)} vs threshold ${rupees(riskLimitsForPath.dualApprovalThresholdPaise)}`
+      : "every recommended offer needs a second approver - the single-approval path is untested"
+  );
+  if (!singleApprovalOffer) throw new Error("No single-approval offer to pay");
+
+  const firstOffer = singleApprovalOffer;
   const approval = await approveOpportunity(firstOffer.id, "verify-maker");
   mockRazorpay.setFailureMode("success");
 
-  let status = approval.status;
-  if (!approval.requiresDualApproval) {
-    status = await submitPaymentToProvider(approval.paymentIntentId);
+  if (approval.requiresDualApproval) {
+    throw new Error(
+      "Selected a sub-threshold offer but it still asked for dual approval - " +
+        "the risk gate and the query disagree about which amount they compare."
+    );
   }
+  const status = await submitPaymentToProvider(approval.paymentIntentId);
 
+  /*
+   * No escape hatch. This previously read `status === "CONFIRMED" ||
+   * approval.requiresDualApproval`, which made the check pass while reporting
+   * `status PENDING_APPROVAL` - a check named "reached a terminal success
+   * state" passing on a state that is neither terminal nor a success.
+   */
   check(
     "Payment reached a terminal success state",
-    status === "CONFIRMED" || approval.requiresDualApproval,
+    status === "CONFIRMED",
     `status ${status}`
   );
 
@@ -414,7 +459,17 @@ async function main() {
         where: { supplierId: supplier.id },
       });
       if (!hasObservation) continue;
-      const result = await evaluateOpportunity(supplier.id, 15000000);
+      /*
+     * Size the offer from the supplier's own profile, exactly as the seed
+     * does. This used to pass a flat Rs 1,50,000 for everyone, which meant the
+     * verifier scored offer sizes no seeded supplier had - and the
+     * dual-approval check below stopped firing without anyone noticing.
+     */
+    const profile = SUPPLIER_PROFILES.find((p) => p.name === supplier.name);
+    const result = await evaluateOpportunity(
+      supplier.id,
+      profile ? receivableAtStakePaise(profile) : 15000000
+    );
       if (result.status === "RECOMMENDED") {
         subject = await prisma.liquidityOpportunity.findUnique({
           where: { id: result.opportunityId },

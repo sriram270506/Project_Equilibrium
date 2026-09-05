@@ -4,6 +4,7 @@ import {
   SUPPLIER_PROFILES,
   generateObservations,
   OBSERVATION_DAYS,
+  receivableAtStakePaise,
 } from "./supplier-profiles";
 import { evaluateOpportunity } from "@/src/server/opportunity-service";
 import { INVOICE_FIXTURES, REASON_CODE_CATALOGUE } from "./invoice-fixtures";
@@ -264,9 +265,16 @@ export async function seedDatabase(
      */
     for (let i = 0; i < SUPPLIER_PROFILES.length; i++) {
       const supplierId = `sup_${pad(i + 1)}`;
-      // Receivable at stake scales with the supplier's size.
-      const receivablePaise =
-        SUPPLIER_PROFILES[i].shape.dailyOutflowPaise * 240;
+
+      /*
+       * Receivable at stake = daily revenue x the collection cycle.
+       *
+       * The multiplier used to be a bare 240, which implied every supplier was
+       * carrying eight months of sales in unpaid invoices. The calibrated
+       * figure is the published national average of 73 days (Recordent 2026),
+       * which is both defensible and the number the model was trained against.
+       */
+      const receivablePaise = receivableAtStakePaise(SUPPLIER_PROFILES[i]);
 
       const result = await evaluateOpportunity(
         supplierId,
