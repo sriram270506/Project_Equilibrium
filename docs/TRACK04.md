@@ -99,12 +99,58 @@ anticipated when it was written:
 All three are fixed. A benchmark that only ever confirms its author was right
 is not measuring anything.
 
-### What would make it materially stronger
+### The adversarial set
+
+`buildAdversarialSet()` is the attempt to attack the same-author weakness
+directly. Its 140 cases were written by reading the controller's code and
+asking what it **assumes**, then constructing inputs where each assumption is
+false. Every case names the assumption it targets.
+
+It found a real hole on the first run:
+
+| | Match rate | False resolutions |
+|---|---|---|
+| Adversarial, before | 60.0% | **12** |
+| Adversarial, after | 78.6% | **0** |
+
+The twelve were `PARTY_SUFFIX_COLLISION`. `normaliseParty` dropped PVT / LTD /
+CORP before comparing, so *Orbit Kitchenware Ltd* and *Orbit Kitchenware Pvt
+Ltd* — two separately registered companies — normalised to the same string, and
+the controller cleared payments to the wrong entity at full confidence. Party
+comparison is now conservative and three-valued (AGREE / ABSENT / DIFFER), and
+a corporate suffix is treated as part of a legal identity rather than noise.
+
+Thirty adversarial cases still fail, all of them **over-escalation** — an
+abbreviated trading name, and a settlement nine days late with no bank
+reference. They are left failing deliberately: the fix in each case is to
+assert sameness on weaker evidence, which is exactly the trade that produced
+the twelve wrong-company payments.
+
+### Robustness
+
+Cumulative cosmetic degradation of the main dataset. Ground truth is asserted
+unchanged at every rung, so this measures brittleness about presentation rather
+than a moving question.
+
+| Rung | Match rate | False resolutions | Missed |
+|---|---|---|---|
+| baseline | 100.0% | 0 | 0 |
+| + reference noise | 97.3% | 0 | 10 |
+| + beneficiary variants | 85.8% | 0 | 42 |
+| + date jitter | 82.3% | 0 | 42 |
+| + dropped identifiers | 66.8% | 0 | 98 |
+
+The match rate falls by a third and **every point of that fall is
+over-escalation**. False resolutions stay at zero on every rung. A finance
+system may degrade into caution; it may not degrade into error. That property
+is a test, not a claim.
+
+### What would still make it stronger
 
 - A real anonymised settlement file with known outcomes.
-- A defect set authored by someone other than the controller's author.
-- Live provider data, which needs the Razorpay test credentials this
-  submission does not ship.
+- A defect set authored by someone with no sight of the controller. The
+  adversarial set narrows this gap but does not close it — a defect class
+  nobody here can imagine is still invisible.
 
 ---
 
@@ -116,12 +162,13 @@ the failure mode this table exists to prevent.
 | Stage | Kind | What it actually is |
 |---|---|---|
 | Ingest | Deterministic | Reads the record pair. No inference. |
-| Normalise reference / party | Deterministic | Case folding, separator stripping, a placeholder denylist, whole-word corporate-suffix removal. Pure string rules. |
+| Normalise reference / party | Deterministic | Case folding, separator stripping, a placeholder denylist. Party names fold case and punctuation ONLY — corporate suffixes are kept, because they are part of a legal identity. Pure string rules. |
 | Structural checks | Deterministic | One side missing, no usable identifier, several settlements under one reference. Set logic. |
 | Candidate scoring | **Statistical** | Weighted field agreement over reference, UTR, amount, value date and beneficiary, normalised to a 0–1 confidence. Weights are hand-set and tuned against the tuning split only. |
 | Policy gates | Deterministic | Counterparty, amount, status, tax, confidence floor. Can veto a 100%-confidence match. |
 | Human review | **Person** | Accept, reject, relink, mark duplicate, freeze. Every action attributed and timestamped; a note is mandatory for everything except plain acceptance. |
 | Ledger and audit | Deterministic | Double-entry posting and the hash-chained audit log. |
+| Provider I/O | **Live external API** | Razorpay Test Mode. Verified by `npm run razorpay:check` — 12/12. |
 
 **There is no LLM anywhere in this path.** Calling a weighted-sum matcher "AI"
 would be exactly the claim this project exists to avoid. What makes it worth
@@ -132,6 +179,38 @@ The separate **liquidity model** (`/dashboard/model`) *is* a fitted logistic
 regression, with its own AUC, permutation controls and model card. That is a
 different system answering a different question, and its AUC is **not** the
 Track 04 accuracy metric.
+
+---
+
+## The live provider integration
+
+```bash
+npm run razorpay:check
+```
+
+Passes **12/12** against Razorpay Test Mode: authenticates, creates a real
+Order, reads it back, checks the amount round-trips to the paise, and verifies
+webhook signing against four cases. It prints the order id so a reviewer can
+look it up in the Razorpay dashboard.
+
+It found a defect the mock could not, because the mock was written to the same
+assumption as the code it stood in for. The adapter treated a missing provider
+object as a `404` — REST convention, and what `MockRazorpay` returns. Razorpay
+answers a well-formed but absent order id with:
+
+```
+400 BAD_REQUEST_ERROR   "The id provided does not exist"
+```
+
+So `getOperation` **threw** on exactly the case reconciliation exists to detect
+— a payment the provider has no record of — instead of returning null and
+raising `MISSING_EXTERNAL`. Reconciliation would have crashed on its most
+important finding.
+
+The fix keys on the description rather than the status code, because a
+*malformed* id also returns 400, with `"... is not a valid id"`. That one keeps
+throwing: reporting a mistyped reference as "the provider has no record" would
+turn our own bug into a finding about someone else.
 
 ---
 

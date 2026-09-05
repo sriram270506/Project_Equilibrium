@@ -8,6 +8,7 @@ import {
 } from "@/src/lib/track04/dataset";
 import { evaluate } from "@/src/lib/track04/evaluate";
 import { readLedgerCorrectness } from "@/src/lib/track04/run-service";
+import { financialSafety } from "@/src/lib/track04/financial-safety";
 import {
   processRecord,
   CONTROLLER_VERSION,
@@ -48,6 +49,7 @@ export async function GET() {
       split: "TUNING",
     });
     const ledger = await readLedgerCorrectness();
+    const safety = await financialSafety();
 
     const baseline = evaluate(heldOut, {
       datasetVersion: DATASET_VERSION,
@@ -85,6 +87,7 @@ export async function GET() {
         thresholds: THRESHOLDS,
         heldOut: report,
         ledger,
+        safety,
         tuning: {
           matchRate: tuningReport.matchRate,
           recordsProcessed: tuningReport.recordsProcessed,

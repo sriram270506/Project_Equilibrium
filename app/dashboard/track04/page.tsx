@@ -124,6 +124,18 @@ interface Track04Data {
     totalCreditsPaise: number;
     accountCount: number;
   };
+  safety: {
+    allClear: boolean;
+    counters: Array<{
+      key: string;
+      label: string;
+      count: number;
+      valuePaise: number | null;
+      source: "BENCHMARK" | "LIVE_SYSTEM";
+      measurement: string;
+      consequence: string;
+    }>;
+  };
   tuning: { matchRate: number; recordsProcessed: number };
   baseline: {
     matchRate: number;
@@ -269,6 +281,77 @@ export default function Track04Page() {
           {runError}
         </div>
       ) : null}
+
+      {/* The claim that matters most, before any accuracy figure. */}
+      <div className="mt-6">
+        <Card
+          className={
+            data.safety.allClear
+              ? "border-ok/35 bg-ok/[0.10]"
+              : "border-danger/40 bg-danger/[0.12]"
+          }
+        >
+          <CardHeader
+            eyebrow="Financial safety"
+            title={
+              data.safety.allClear
+                ? "No money or books were damaged"
+                : "A safety counter is non-zero"
+            }
+            hint="An accuracy figure says how often the system was right. These say what happened the times it was not. Each counter names how it was measured — two come from the benchmark, three from the live system."
+          />
+          <CardBody>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {data.safety.counters.map((c) => (
+                <div
+                  key={c.key}
+                  title={`${c.measurement}
+
+If non-zero: ${c.consequence}`}
+                  className={cn(
+                    "rounded-lg border px-4 py-3 transition-transform hover:scale-[1.02]",
+                    c.count === 0
+                      ? "border-ok/25 bg-ok/[0.07]"
+                      : "border-danger/35 bg-danger/[0.12]"
+                  )}
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-[13px] text-ink-body">{c.label}</span>
+                    <span
+                      className={cn(
+                        "tabular text-2xl font-semibold",
+                        c.count === 0 ? "text-ok" : "text-danger"
+                      )}
+                    >
+                      {c.count}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span
+                      className={cn(
+                        "rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
+                        c.source === "LIVE_SYSTEM"
+                          ? "border-brand/30 bg-brand/[0.10] text-brand-bright"
+                          : "border-white/15 bg-white/[0.05] text-ink-muted"
+                      )}
+                    >
+                      {c.source === "LIVE_SYSTEM" ? "live system" : "benchmark"}
+                    </span>
+                    {c.valuePaise !== null ? (
+                      <span className="tabular text-2xs text-ink-faint">
+                        <Money paise={c.valuePaise} /> at stake
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 text-2xs leading-relaxed text-ink-faint">
+                    {c.measurement}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      </div>
 
       {/* Above the fold: the numbers a judge is looking for. */}
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">

@@ -6,15 +6,41 @@ A supplier delivers goods on Monday and gets paid 30 days later. Payroll is on
 Friday. That gap is the single largest cause of MSME failure in India, and it
 has nothing to do with whether the business is any good.
 
-Equilibrium is an AI Finance Controller that predicts which marketplace suppliers are about to run short of cash,
-offers them their own receivables early at a fair price, and then moves that
-money with the reliability guarantees a bank requires.
+Equilibrium is an **AI Finance Controller that knows when to act, when to ask,
+and when not to guess.**
 
-The controller reads messy invoice state, detects and explains anomalies,
-evaluates liquidity opportunity, and proposes the next safe finance operation
-through typed read-only tools. Deterministic policy, human approval, payment,
-ledger, and reconciliation controls remain authoritative; the AI cannot move
-money directly.
+That last clause is the product. Anything can produce a confident answer; what
+makes a finance system usable is that it declines to produce one when the
+evidence does not support it, and says exactly why.
+
+```
+546 labelled finance records
+  367 held out for scoring         thresholds tuned on the other 179 only
+            |
+     AI finance controller         scores candidates, produces a confidence
+            |
+   deterministic policy engine     can veto a 100%-confidence match
+            |
+  227 cleared automatically        61.9%, with the evidence recorded
+  140 escalated to a human         38.1%, each with a reason and an action
+            |
+       human review                accept, reject, relink, freeze - attributed
+            |
+   ledger + audit + reconciliation double-entry, hash-chained, provable
+```
+
+Measured on a held-out split: **zero false resolutions**. Degrade the input
+data until the match rate falls by a third and it is *still* zero — every point
+of that fall is the controller asking for a human more often, never getting
+things wrong more often. A finance system may degrade into caution; it may not
+degrade into error.
+
+It also predicts which suppliers are about to run short of cash and offers them
+their own receivables early — but the prediction is the easy half. Moving the
+money correctly, and knowing when not to, is the part worth building.
+
+Deterministic policy, human approval, payment, ledger and reconciliation
+controls remain authoritative throughout. The AI cannot move money directly.
 
 ---
 
