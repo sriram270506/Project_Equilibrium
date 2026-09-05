@@ -47,3 +47,16 @@ yarn-error.log*
 # TypeScript incremental build cache - a local artifact, not source.
 *.tsbuildinfo
 benchmark-results/
+
+# Editor and assistant tooling. Local developer configuration, not project
+# source — none of it is needed to build, test or run this repository.
+.claude/
+.kiro/
+.cursor/
+.aider*
+.windsurf/
+.continue/
+.vscode/
+CLAUDE.md
+AGENTS.md
+.mcp.json
