@@ -82,6 +82,20 @@ export interface EvaluationReport {
   matchRate: number;
   autoResolutionRate: number;
   exceptionRate: number;
+  /**
+   * Of the records the controller CLEARED, the share it was right to clear.
+   *
+   * Reported separately from the match rate because they fail in opposite
+   * directions. A controller that escalates everything scores a perfect
+   * precision and is useless; one that clears everything scores a high
+   * auto-resolution rate and is dangerous. Precision is the number that says
+   * whether the cleared pile can be trusted.
+   */
+  autoResolutionPrecision: number;
+  /** Of the records that NEEDED a human, the share that got one. */
+  escalationRecall: number;
+  /** Share of planted duplicate settlements the controller caught. */
+  duplicateResolutionRate: number;
 
   /* Error decomposition. */
   falseResolutions: number;
@@ -97,6 +111,13 @@ export interface EvaluationReport {
 
   /* Financial safety. */
   duplicatePaymentsPrevented: number;
+  /**
+   * Records the controller refused to clear on a POLICY gate rather than on a
+   * low score - i.e. the candidate matched well and was blocked anyway. This
+   * is the count that distinguishes a system with controls from a system with
+   * a threshold.
+   */
+  blockedByPolicyGate: number;
   shortSettlementsCaught: number;
   unexplainedOutboundCaught: number;
   silentResolutionsOfBadRecords: number;
@@ -107,6 +128,24 @@ export interface EvaluationReport {
 
   /* Honest exception list. */
   exceptions: ExceptionRow[];
+}
+
+/**
+ * Ledger correctness, measured against the live books rather than the
+ * benchmark.
+ *
+ * The benchmark posts no journals - it is a matching exercise, not a payment
+ * run - so a "ledger imbalance" figure computed from it would be zero by
+ * construction and would mean nothing. This reads the real trial balance
+ * instead, and says so, because a metric that cannot fail is not a metric.
+ */
+export interface LedgerCorrectness {
+  balanced: boolean;
+  imbalancePaise: number;
+  totalDebitsPaise: number;
+  totalCreditsPaise: number;
+  accountCount: number;
+  measuredAgainst: "LIVE_LEDGER";
 }
 
 function isCorrect(
@@ -229,6 +268,42 @@ export function evaluate(
 
   const correctlyResolved = results.filter((r) => r.correct).length;
 
+  // Of what it cleared, how much it was right to clear.
+  const correctAutoResolutions = autoResolved.filter((r) => r.correct).length;
+  const autoResolutionPrecision =
+    autoResolved.length === 0 ? 1 : correctAutoResolutions / autoResolved.length;
+
+  // Of what needed a human, how much got one.
+  const neededHuman = results.filter(
+    (r) => r.record.groundTruth.expectedAction === "ESCALATE"
+  );
+  const escalationRecall =
+    neededHuman.length === 0
+      ? 1
+      : neededHuman.filter((r) => r.decision.outcome !== "AUTO_RESOLVED")
+          .length / neededHuman.length;
+
+  const duplicates = results.filter(
+    (r) => r.record.groundTruth.label === "DUPLICATE"
+  );
+  const duplicateResolutionRate =
+    duplicates.length === 0
+      ? 1
+      : duplicates.filter((r) => r.correct).length / duplicates.length;
+
+  /*
+   * Blocked on a policy gate rather than on a weak score: the candidate scored
+   * at or above the auto-resolve bar and was escalated anyway.
+   */
+  const blockedByPolicyGate = escalated.filter(
+    (r) =>
+      r.decision.confidence >= 0.9 ||
+      r.decision.exceptionType === "DUPLICATE" ||
+      r.decision.exceptionType === "COUNTERPARTY_MISMATCH" ||
+      r.decision.exceptionType === "PARTIAL_SETTLEMENT" ||
+      r.decision.exceptionType === "AMBIGUOUS"
+  ).length;
+
   return {
     datasetVersion: options.datasetVersion,
     datasetSeed: options.datasetSeed,
@@ -245,6 +320,9 @@ export function evaluate(
     matchRate: correctlyResolved / records.length,
     autoResolutionRate: autoResolved.length / records.length,
     exceptionRate: escalated.length / records.length,
+    autoResolutionPrecision,
+    escalationRecall,
+    duplicateResolutionRate,
 
     falseResolutions: falseResolutions.length,
     falseResolutionRate: falseResolutions.length / records.length,
@@ -269,6 +347,7 @@ export function evaluate(
     ),
 
     duplicatePaymentsPrevented: countCaught("DUPLICATE"),
+    blockedByPolicyGate,
     shortSettlementsCaught: countCaught("AMOUNT_MISMATCH"),
     unexplainedOutboundCaught: countCaught("MISSING_INTERNAL"),
     silentResolutionsOfBadRecords: falseResolutions.length,

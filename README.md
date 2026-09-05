@@ -166,6 +166,9 @@ cash flows, and is not monitored for drift.
 
 | Screen | What it shows |
 |---|---|
+| **Track 04 benchmark** | 546 labelled finance-operation records scored live, with the honest exception list and what the score does *not* prove — see [docs/TRACK04.md](docs/TRACK04.md) |
+| **Exception review** | The queue where a human resolves what the controller refused to clear; every action attributed, and a reason required |
+| **Run history** | Every recorded evaluation with its dataset and controller version, so a change in score is interpretable |
 | **Guided walkthrough** | Seven steps against the real services; two deliberately break the provider |
 | **Suppliers at risk** | 30-day runway chart, exact per-feature model contributions, a counterfactual, and the money split both ways |
 | **Money movement** | One payment end to end: lifecycle rail, our view vs the provider's, ledger entries, hash-chained timeline |
@@ -241,7 +244,8 @@ claim you have to take on trust — `npm run demo:verify` checks all of it.
 | Command | What it does |
 |---|---|
 | `npm run dev` | Start the app |
-| `npm run demo:verify` | End-to-end verification of every claim above |
+| `npm run demo:verify` | End-to-end verification of every claim above (49 checks) |
+| `npm run track04:benchmark` | Score the finance-operations controller on 546 labelled records. Add `-- --record` to persist the run |
 | `npm run ml:train` | Refit the model and print held-out metrics |
 | `npm test` | Unit tests |
 | `npm run typecheck` | TypeScript, strict |

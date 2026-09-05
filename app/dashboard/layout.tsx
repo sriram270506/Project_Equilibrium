@@ -68,6 +68,16 @@ const SECTIONS: Array<{
         hint: "546 labelled records, scored",
       },
       {
+        href: "/dashboard/track04/review",
+        label: "Exception review",
+        hint: "Decide what the controller would not",
+      },
+      {
+        href: "/dashboard/track04/history",
+        label: "Run history",
+        hint: "Every evaluation, versioned",
+      },
+      {
         href: "/dashboard/model",
         label: "Model card",
         hint: "Accuracy and limits",

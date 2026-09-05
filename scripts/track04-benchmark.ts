@@ -25,6 +25,11 @@ import {
 } from "../src/lib/track04/dataset";
 import { evaluate, type EvaluationReport } from "../src/lib/track04/evaluate";
 import { CONTROLLER_VERSION, THRESHOLDS } from "../src/lib/track04/controller";
+import {
+  readLedgerCorrectness,
+  runAndRecord,
+} from "../src/lib/track04/run-service";
+import { prisma } from "../src/lib/prisma";
 
 const rupees = (paise: number) =>
   "Rs " + (paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 });
@@ -64,6 +69,15 @@ function printReport(report: EvaluationReport, label: string) {
   console.log(`    Match rate               ${pct(report.matchRate)}`);
   console.log(`    Auto-resolution rate     ${pct(report.autoResolutionRate)}`);
   console.log(`    Exception rate           ${pct(report.exceptionRate)}`);
+  console.log(
+    `    Auto-resolution precision ${pct(report.autoResolutionPrecision)} - of what it cleared, how much it was right to clear`
+  );
+  console.log(
+    `    Escalation recall        ${pct(report.escalationRecall)} - of what needed a human, how much got one`
+  );
+  console.log(
+    `    Duplicate resolution rate ${pct(report.duplicateResolutionRate)}`
+  );
 
   console.log("");
   console.log("  Errors, decomposed");
@@ -106,6 +120,9 @@ function printReport(report: EvaluationReport, label: string) {
   );
   console.log(
     `    Bad records silently cleared      ${report.silentResolutionsOfBadRecords}`
+  );
+  console.log(
+    `    Blocked by a policy gate          ${report.blockedByPolicyGate} - matched well, refused anyway`
   );
 
   console.log("");
@@ -198,7 +215,7 @@ function wrap(text: string, width: number): string[] {
   return lines;
 }
 
-function main() {
+async function main() {
   console.log("");
   rule();
   console.log("  EQUILIBRIUM - TRACK 04 FINANCE-OPERATIONS BENCHMARK");
@@ -273,6 +290,25 @@ function main() {
   );
 
   printExceptions(heldOutReport);
+
+  /* ------------------------------------------------- ledger correctness */
+
+  heading("Ledger correctness");
+  const ledger = await readLedgerCorrectness();
+  console.log(
+    `  Trial balance            ${ledger.balanced ? "BALANCED" : "OUT OF BALANCE"}`
+  );
+  console.log(`  Imbalance                ${rupees(ledger.imbalancePaise)}`);
+  console.log(
+    `  Debits / credits         ${rupees(ledger.totalDebitsPaise)} / ${rupees(ledger.totalCreditsPaise)}`
+  );
+  console.log(`  Accounts                 ${ledger.accountCount}`);
+  console.log("");
+  console.log(
+    "  Measured against the LIVE ledger, not the benchmark. The benchmark posts\n" +
+      "  no journals - it is a matching exercise - so an imbalance computed from\n" +
+      "  it would be zero by construction and would mean nothing."
+  );
 
   /* ---------------------------------------------------- what this proves */
 
@@ -376,6 +412,23 @@ function main() {
   console.log("");
 
   /*
+   * Recording is opt-in: `npm run track04:benchmark -- --record`.
+   *
+   * Off by default because a command that reports a number should not also
+   * mutate whatever DATABASE_URL happens to point at. The same reasoning
+   * removed `prisma db push` from the build script.
+   */
+  if (process.argv.includes("--record")) {
+    const recorded = await runAndRecord({ operator: "cli", split: "HELD_OUT" });
+    console.log(
+      `  Recorded as ${recorded.runId} with ${recorded.reviewsOpened} exceptions ` +
+        "opened for review."
+    );
+    console.log("  See /dashboard/track04/history and /dashboard/track04/review.");
+    console.log("");
+  }
+
+  /*
    * A benchmark that cannot fail is a demo. False resolutions are the error
    * class that actually costs money, so the run is non-zero-exit if any
    * appear, rather than printing a bad number in a passing build.
@@ -390,4 +443,11 @@ function main() {
   }
 }
 
-main();
+main()
+  .catch((error) => {
+    console.error("\nBenchmark crashed:", error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

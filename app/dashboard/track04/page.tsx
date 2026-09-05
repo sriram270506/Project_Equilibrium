@@ -17,6 +17,7 @@ import {
   MonoId,
   Callout,
 } from "@/src/components/ui/primitives";
+import Link from "next/link";
 import { cn } from "@/src/lib/utils";
 
 /**
@@ -97,6 +98,10 @@ interface Track04Data {
     matchRate: number;
     autoResolutionRate: number;
     exceptionRate: number;
+    autoResolutionPrecision: number;
+    escalationRecall: number;
+    duplicateResolutionRate: number;
+    blockedByPolicyGate: number;
     falseResolutions: number;
     falseResolutionRate: number;
     missedMatches: number;
@@ -111,6 +116,13 @@ interface Track04Data {
     byDifficulty: Breakdown[];
     byLabel: Breakdown[];
     exceptions: ExceptionRow[];
+  };
+  ledger: {
+    balanced: boolean;
+    imbalancePaise: number;
+    totalDebitsPaise: number;
+    totalCreditsPaise: number;
+    accountCount: number;
   };
   tuning: { matchRate: number; recordsProcessed: number };
   baseline: {
@@ -145,6 +157,9 @@ export default function Track04Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openRecord, setOpenRecord] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+  const [runResult, setRunResult] = useState<string | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -165,6 +180,36 @@ export default function Track04Page() {
     load();
   }, [load]);
 
+  /*
+   * The one-click evaluation: build the dataset, score it, persist the run,
+   * and open a review row for every record the controller would not clear.
+   * Distinct from the read-only refresh above, which computes but records
+   * nothing - looking at a score should not create one.
+   */
+  async function runEvaluation() {
+    setRunning(true);
+    setRunError(null);
+    setRunResult(null);
+    try {
+      const res = await fetch("/api/track04/run", { method: "POST" });
+      const json = await res.json();
+      if (!json.success) {
+        setRunError(json.error?.message ?? "The evaluation was refused");
+        return;
+      }
+      setRunResult(
+        `Recorded ${json.data.runId}: ${json.data.summary.correctlyResolved}/` +
+          `${json.data.summary.recordsProcessed} correct, ` +
+          `${json.data.reviewsOpened} exceptions opened for review.`
+      );
+      await load();
+    } catch {
+      setRunError("Could not reach the API.");
+    } finally {
+      setRunning(false);
+    }
+  }
+
   if (loading) return <LoadingState label="Running the benchmark" />;
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!data) return null;
@@ -179,11 +224,51 @@ export default function Track04Page() {
         title="Track 04 benchmark"
         lede="A labelled finance-operations dataset, scored end to end. Run fresh on every page load, so this is what the code in the repository does right now — not a number recorded once."
         action={
-          <Button variant="secondary" size="sm" onClick={load}>
-            Re-run
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/dashboard/track04/review"
+              className="focusable rounded-md border border-line-strong bg-surface-card px-3 py-1.5 text-[13px] font-medium text-ink-strong hover:bg-surface-sunken"
+            >
+              Review queue
+            </Link>
+            <Link
+              href="/dashboard/track04/history"
+              className="focusable rounded-md border border-line-strong bg-surface-card px-3 py-1.5 text-[13px] font-medium text-ink-strong hover:bg-surface-sunken"
+            >
+              Run history
+            </Link>
+            <Button variant="secondary" size="sm" onClick={load}>
+              Refresh
+            </Button>
+            <button
+              type="button"
+              disabled={running}
+              onClick={runEvaluation}
+              className="focusable btn-lift rounded-lg border border-white/20 bg-gradient-to-b from-brand-deep to-[rgb(29_78_216)] px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-glow-brand disabled:opacity-60"
+            >
+              {running ? "Running..." : "Run Track 04 evaluation"}
+            </button>
+          </div>
         }
       />
+
+      {runResult ? (
+        <div className="mt-4 rounded-lg border border-ok/30 bg-ok/[0.10] px-4 py-3 text-[13px] text-ok">
+          {runResult}{" "}
+          <Link
+            href="/dashboard/track04/review"
+            className="font-medium underline"
+          >
+            Open the review queue
+          </Link>
+          .
+        </div>
+      ) : null}
+      {runError ? (
+        <div className="mt-4 rounded-lg border border-danger/30 bg-danger/[0.10] px-4 py-3 text-[13px] text-danger">
+          {runError}
+        </div>
+      ) : null}
 
       {/* Above the fold: the numbers a judge is looking for. */}
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -235,6 +320,36 @@ export default function Track04Page() {
           label="Value held for review"
           value={<Money paise={h.valueHeldForReviewPaise} />}
           tone="warn"
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Stat
+          label="Auto-resolution precision"
+          value={pct(h.autoResolutionPrecision)}
+          tone="ok"
+          hint="Of what it cleared, how much was right"
+        />
+        <Stat
+          label="Escalation recall"
+          value={pct(h.escalationRecall)}
+          tone="ok"
+          hint="Of what needed a human, how much got one"
+        />
+        <Stat
+          label="Throughput"
+          value={`${Math.round(h.recordsPerSecond * 60).toLocaleString("en-IN")}/min`}
+          hint={`${Math.round(h.recordsPerSecond).toLocaleString("en-IN")} records/sec`}
+        />
+        <Stat
+          label="Ledger imbalance"
+          value={<Money paise={data.ledger.imbalancePaise} />}
+          tone={data.ledger.balanced ? "ok" : "danger"}
+          hint={
+            data.ledger.balanced
+              ? `Live trial balance foots across ${data.ledger.accountCount} accounts`
+              : "The live ledger is out of balance"
+          }
         />
       </div>
 
@@ -323,6 +438,12 @@ export default function Track04Page() {
           label="Unexplained outbound caught"
           value={h.unexplainedOutboundCaught}
           tone="ok"
+        />
+        <Stat
+          label="Blocked by a policy gate"
+          value={h.blockedByPolicyGate}
+          tone="brand"
+          hint="Matched well, refused anyway"
         />
         <Stat
           label="Value at risk from errors"

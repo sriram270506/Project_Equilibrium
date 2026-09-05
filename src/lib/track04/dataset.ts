@@ -35,7 +35,7 @@ import {
 } from "../benchmark/population-calibration";
 
 /** Bump when the generator changes shape. Reported with every benchmark run. */
-export const DATASET_VERSION = "track04-dataset-1.1.0";
+export const DATASET_VERSION = "track04-dataset-1.2.0";
 export const DATASET_SEED = 20260904;
 export const DATASET_SIZE = 546;
 
@@ -195,18 +195,34 @@ function dateAt(offsetDays: number): string {
  */
 function drawAmountPaise(ctx: Ctx): number {
   const floor = ASSUMPTIONS.financeableTurnoverFloorRupees.value;
-  const cdfAtFloor = normalCdf(
+
+  /*
+   * Truncated at BOTH ends of the turnover distribution, not clipped at the
+   * end of the amount.
+   *
+   * The first version clipped the resulting invoice at Rs 8 lakh, which put
+   * 12.8% of all 546 records on exactly that figure - a visible spike at the
+   * clip, in a dataset whose whole claim is that its amounts follow a
+   * calibrated distribution. Truncating the draw instead keeps the lognormal
+   * shape intact between the bounds; the tail is excluded rather than piled up
+   * against a wall.
+   *
+   * The upper bound is the 97th percentile of the fitted distribution, so it
+   * is derived from the fit rather than chosen: the top 3% of Indian MSMEs by
+   * turnover are not the firms a marketplace advances small invoices to.
+   */
+  const lowerU = normalCdf(
     (Math.log(floor) - TURNOVER_FIT.logMean) / TURNOVER_FIT.logSd
   );
-  const u = cdfAtFloor + ctx.rng() * (1 - cdfAtFloor);
+  const upperU = 0.97;
+  const u = lowerU + ctx.rng() * (upperU - lowerU);
   const turnover = Math.exp(
     TURNOVER_FIT.logMean +
       TURNOVER_FIT.logSd * probit(Math.min(Math.max(u, 1e-9), 1 - 1e-9))
   );
-  // One invoice ~ a fortnight of revenue, capped so a single record cannot
-  // dominate the materiality totals.
-  const dailyRevenueRupees = turnover / 365;
-  const invoiceRupees = Math.min(dailyRevenueRupees * 14, 8_00_000);
+
+  // One invoice is roughly a fortnight of revenue.
+  const invoiceRupees = (turnover / 365) * 14;
   return Math.max(Math.round(invoiceRupees * 100), 50_000);
 }
 
