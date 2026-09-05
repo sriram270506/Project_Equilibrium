@@ -204,7 +204,7 @@ export function ForecastChart({
               ) : null}
 
               <Tooltip
-                cursor={{ stroke: "rgb(255 255 255 / 0.2)" }}
+                cursor={{ stroke: "rgb(197 187 170)" }}
                 contentStyle={{
                   borderRadius: 10,
                   border: "1px solid rgb(255 255 255 / 0.14)",

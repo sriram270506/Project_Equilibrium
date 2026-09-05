@@ -233,6 +233,12 @@ Design decisions and trade-offs are in [ARCHITECTURE.md](ARCHITECTURE.md).
 What is real versus simulated is in [docs/SCOPE.md](docs/SCOPE.md).
 Operational procedures are in [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
+Fourteen defects that reached a running system — what each one actually was,
+and what changed so it cannot recur — are written up in
+[docs/FAILURE_RECOVERY.md](docs/FAILURE_RECOVERY.md). Ten of the fourteen were
+silent: a check that stopped running, a metric that could not fail, a mock that
+agreed with the code it was standing in for.
+
 ---
 
 ## What is real, simulated, and not built

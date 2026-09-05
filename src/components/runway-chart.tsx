@@ -141,7 +141,7 @@ export function RunwayChart({
               />
 
               <Tooltip
-                cursor={{ stroke: "rgb(203 213 225)" }}
+                cursor={{ stroke: "rgb(197 187 170)" }}
                 contentStyle={{
                   borderRadius: 8,
                   border: "1px solid rgb(226 232 240)",
