@@ -293,11 +293,11 @@ function Figure({
     ok: "text-ok",
     warn: "text-warn",
     danger: "text-danger",
-    brand: "text-brand-bright",
+    brand: "text-brand",
   }[tone];
 
   return (
-    <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+    <div className="rounded-lg border border-rule bg-paper-sunken px-4 py-3">
       <p className="text-2xs font-medium uppercase tracking-wider text-ink-muted">
         {label}
       </p>

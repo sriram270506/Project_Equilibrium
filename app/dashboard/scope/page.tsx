@@ -1,7 +1,12 @@
+import { PageHeader } from "@/src/components/ui/primitives";
+
 export default function ScopePage() {
   return (
     <div className="max-w-4xl">
-      <h1 className="text-3xl font-bold mb-8">Scope & Controls</h1>
+      <PageHeader
+        title="Scope and controls"
+        lede="What is real, what is simulated, and what this deliberately does not do."
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-ok/[0.10] border border-ok/30 rounded-lg p-6">
@@ -37,7 +42,7 @@ export default function ScopePage() {
           </ul>
         </div>
 
-        <div className="bg-white/[0.03] border border-white/[0.1] rounded-lg p-6">
+        <div className="bg-paper-sunken border border-rule rounded-lg p-6">
           <h2 className="text-lg font-semibold text-ink-strong mb-3">🚫 Out of Scope</h2>
           <ul className="text-sm text-ink-body space-y-2">
             <li>• Production PCI-DSS compliance</li>
@@ -54,7 +59,7 @@ export default function ScopePage() {
         </div>
       </div>
 
-      <div className="glass backdrop-blur-glass rounded-card p-8 mb-8">
+      <div className="glass  rounded-card p-8 mb-8">
         <h2 className="text-2xl font-bold mb-6">Architecture Principles</h2>
         
         <div className="space-y-8">

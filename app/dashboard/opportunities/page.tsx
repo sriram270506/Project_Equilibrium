@@ -50,7 +50,9 @@ export default function OpportunitiesPage() {
   return (
     <div className="max-w-6xl">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Liquidity Opportunities</h1>
+        <h1 className="display text-[34px] leading-[1.1] text-ink-strong">
+          Suppliers at risk
+        </h1>
         <button
           onClick={() =>
             setFilter(filter === "RECOMMENDED" ? "APPROVED" : "RECOMMENDED")
@@ -68,7 +70,7 @@ export default function OpportunitiesPage() {
       )}
 
       {opportunities.length === 0 ? (
-        <div className="bg-white/[0.03] border border-white/[0.1] rounded-lg p-12 text-center">
+        <div className="bg-paper-sunken border border-rule rounded-lg p-12 text-center">
           <p className="text-ink-muted">No opportunities found</p>
         </div>
       ) : (
@@ -76,7 +78,7 @@ export default function OpportunitiesPage() {
           {opportunities.map((opp) => (
             <div
               key={opp.id}
-              className="glass backdrop-blur-glass rounded-card p-6 hover:shadow-lg transition-shadow"
+              className="glass  rounded-card p-6 hover:shadow-lg transition-shadow"
             >
               <div className="flex justify-between items-start mb-4">
                 <div>

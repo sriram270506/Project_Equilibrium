@@ -226,7 +226,7 @@ export default function ControllerPage() {
                         onClick={() => runController(invoice.id)}
                         disabled={running}
                         className={cn(
-                          "focusable glass glass-interactive w-full rounded-card p-4 text-left backdrop-blur-glass",
+                          "focusable glass glass-interactive w-full rounded-card p-4 text-left ",
                           isSelected && "glass-accent",
                           running && !isSelected && "opacity-50"
                         )}
@@ -264,7 +264,7 @@ export default function ControllerPage() {
                             .map((code) => (
                               <span
                                 key={code}
-                                className="mono rounded border border-white/[0.12] bg-white/[0.05] px-1.5 py-0.5 text-[10px] text-ink-muted"
+                                className="mono rounded border border-rule-strong bg-paper-sunken px-1.5 py-0.5 text-[10px] text-ink-muted"
                               >
                                 {code}
                               </span>
@@ -315,7 +315,7 @@ export default function ControllerPage() {
                       .map((cost) => (
                         <div
                           key={cost.code}
-                          className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3"
+                          className="rounded-lg border border-rule bg-paper-sunken px-4 py-3"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
@@ -372,7 +372,7 @@ export default function ControllerPage() {
                     {selectedInvoice.counterfactuals.map((cf) => (
                       <div
                         key={cf.code}
-                        className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3"
+                        className="rounded-lg border border-rule bg-paper-sunken px-4 py-3"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <p className="text-[13px] leading-relaxed text-ink-body">

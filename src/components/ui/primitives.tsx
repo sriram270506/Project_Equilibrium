@@ -4,9 +4,13 @@ import { cn } from "@/src/lib/utils";
 /**
  * Shared UI primitives.
  *
- * Every screen renders through these, which is what lets the whole console
- * change material without rewriting fifteen pages. Glass treatment, hover
- * physics, and contrast rules live here rather than being reinvented per page.
+ * Every screen renders through these, which is what let the whole console
+ * change material - from dark glass to paper and ink - by editing this file
+ * and two token files rather than rewriting twenty pages.
+ *
+ * The material is stock: a sheet is brighter than the canvas it sits on,
+ * bounded by a printed hairline, with a tight warm shadow and a 3px corner.
+ * Paper is cut, not moulded.
  */
 
 /* ------------------------------------------------------------------ Card */
@@ -29,12 +33,14 @@ export function Card({
         "rounded-card",
         // Blur via Tailwind utilities: a raw backdrop-filter in globals.css is
         // stripped by the build, which left every panel unblurred.
-        tone !== "flat" && "glass backdrop-blur-glass backdrop-saturate-150",
-        tone === "raised" && "glass-raised",
-        tone === "accent" && "glass-accent",
-        tone === "flat" &&
-          "border border-white/[0.07] bg-white/[0.02] rounded-card",
-        interactive && tone !== "flat" && "glass-interactive glass-sheen",
+        tone !== "flat" && "sheet",
+        tone === "raised" && "sheet-raised",
+        // `accent` gets the margin rule - the stripe down the binding edge of
+        // a ledger page. It is the one ornament in the system, reserved for
+        // the sheet that matters most on a given screen.
+        tone === "accent" && "sheet-raised sheet-ruled pl-1",
+        tone === "flat" && "border border-rule bg-paper-sunken rounded-card",
+        interactive && tone !== "flat" && "sheet-interactive",
         className
       )}
     >
@@ -55,10 +61,19 @@ export function CardHeader({
   eyebrow?: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-white/[0.07] px-5 py-4">
+    <div className="flex items-start justify-between gap-4 border-b border-rule px-5 py-4">
       <div className="min-w-0">
-        {eyebrow ? <p className="eyebrow mb-1.5">{eyebrow}</p> : null}
-        <h2 className="text-[15px] font-semibold tracking-tight text-ink-strong">
+        {/*
+          The eyebrow sits above a short rule, the way a printed statement
+          announces a section. Cheap, and it does more for "this is a financial
+          document" than any amount of colour.
+        */}
+        {eyebrow ? (
+          <p className="eyebrow mb-2 inline-block border-b border-rule-strong pb-1">
+            {eyebrow}
+          </p>
+        ) : null}
+        <h2 className="text-[16px] font-semibold tracking-tight text-ink-strong">
           {title}
         </h2>
         {hint ? (
@@ -94,18 +109,25 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="fade-up mb-7 flex items-start justify-between gap-6">
-      <div className="max-w-3xl">
-        <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-ink-strong">
-          {title}
-        </h1>
-        {lede ? (
-          <p className="mt-2.5 text-[15px] leading-relaxed text-ink-muted">
-            {lede}
-          </p>
-        ) : null}
+    <header className="fade-up mb-7">
+      <div className="rule-heading flex items-start justify-between gap-6">
+        <div className="max-w-3xl">
+          {/*
+            Display serif, only here and only at this size. A transitional
+            serif at 34px reads as a masthead; the same face at 13px would read
+            as a mistake, which is why nothing below 24px uses it.
+          */}
+          <h1 className="display text-[34px] leading-[1.1] text-ink-strong">
+            {title}
+          </h1>
+        </div>
+        {action ? <div className="shrink-0 pt-1">{action}</div> : null}
       </div>
-      {action ? <div className="shrink-0 pt-1">{action}</div> : null}
+      {lede ? (
+        <p className="mt-3 max-w-3xl text-[14.5px] leading-relaxed text-ink-muted">
+          {lede}
+        </p>
+      ) : null}
     </header>
   );
 }
@@ -130,36 +152,47 @@ export function Stat({
     ok: "text-ok",
     warn: "text-warn",
     danger: "text-danger",
-    brand: "text-brand-bright",
+    brand: "text-brand",
   }[tone];
 
-  const glow = {
+  /*
+   * The margin rule carries the tone, so a stat declares its status
+   * structurally as well as by the colour of its figure. Nothing important in
+   * this system is signalled by hue alone.
+   */
+  const ruleTone = {
     neutral: "",
-    ok: "shadow-glow-ok",
-    warn: "shadow-glow-warn",
-    danger: "shadow-glow-danger",
-    brand: "shadow-glow-brand",
+    ok: "ruled-ok",
+    warn: "ruled-warn",
+    danger: "ruled-danger",
+    brand: "",
   }[tone];
 
   return (
     <Card
-      tone={emphasis ? "accent" : "default"}
-      className={cn("group p-5", emphasis && glow)}
+      tone={tone === "neutral" && !emphasis ? "default" : "accent"}
+      className={cn("group p-5", ruleTone)}
     >
-      <p className="text-[12px] font-medium uppercase tracking-wider text-ink-muted">
-        {label}
-      </p>
+      <p className="eyebrow">{label}</p>
       <p
+        /*
+         * Fluid, not fixed. A fixed 30px looked right on "367" and clipped
+         * "Rs 4,80,52,127.72" - a crore-scale figure is fifteen characters of
+         * monospace and needs about 270px where the card offers 220. Scaling
+         * with the viewport keeps the small figures large and lets the long
+         * ones fit, rather than shrinking every number to suit the worst case.
+         */
         className={cn(
-          "tabular mt-2.5 text-[30px] font-semibold leading-none transition-transform duration-300 ease-spring group-hover:scale-[1.03] group-hover:origin-left",
-          valueTone,
-          tone === "brand" && "figure-glow"
+          "figure mt-3 leading-none text-[clamp(1.15rem,1.65vw,1.75rem)]",
+          valueTone
         )}
       >
         {value}
       </p>
       {hint ? (
-        <p className="mt-2.5 text-[13px] leading-snug text-ink-faint">{hint}</p>
+        <p className="mt-2.5 text-[12.5px] leading-snug text-ink-faint">
+          {hint}
+        </p>
       ) : null}
     </Card>
   );
@@ -169,17 +202,21 @@ export function Stat({
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
+/*
+ * Flat ink fills, no gradients.
+ *
+ * A gradient button is the fastest way to make a light interface look like a
+ * landing-page template. These are solid, they press in rather than glow, and
+ * every one clears 4.5:1 for its own label - Razorpay navy carries white at
+ * about 14.8:1, the ledger red at about 6.9:1.
+ */
 const buttonVariants: Record<ButtonVariant, string> = {
-  primary:
-    // Both stops are dark enough for white text at 13px. The brighter blue
-  // looked better and measured 2.5:1 against white, well under the 4.5:1 floor.
-  "bg-gradient-to-b from-brand-deep to-[rgb(29_78_216)] text-white border-white/25 shadow-glow-brand hover:shadow-[0_0_40px_-6px_rgb(var(--brand)/0.7)] hover:from-brand hover:to-brand-deep",
+  primary: "bg-brand-deep text-white border-brand-deep hover:bg-brand",
   secondary:
-    "bg-white/[0.06] text-ink-strong border-white/[0.14] hover:bg-white/[0.11] hover:border-white/25",
+    "bg-paper-sheet text-ink-strong border-rule-strong hover:bg-paper-tint",
   ghost:
-    "bg-transparent text-ink-muted border-transparent hover:bg-white/[0.07] hover:text-ink-strong",
-  danger:
-    "bg-gradient-to-b from-danger to-danger-deep text-white border-white/20 shadow-glow-danger",
+    "bg-transparent text-ink-muted border-transparent hover:bg-paper-tint hover:text-ink-strong",
+  danger: "bg-danger text-white border-danger hover:bg-danger-deep",
 };
 
 export function Button({
@@ -195,7 +232,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "focusable btn-lift inline-flex items-center justify-center gap-2 rounded-lg border font-medium backdrop-blur-sm",
+        "focusable btn-lift inline-flex items-center justify-center gap-2 rounded-[3px] border font-medium",
         "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0",
         size === "sm" ? "px-3.5 py-1.5 text-[13px]" : "px-4.5 py-2.5 text-sm",
         buttonVariants[variant],
@@ -271,7 +308,7 @@ export function Callout({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-card border px-4 py-3.5 text-ink-body backdrop-blur-xl",
+        "relative overflow-hidden rounded-card border px-4 py-3.5 text-ink-body",
         tones
       )}
     >
@@ -297,7 +334,7 @@ export function LoadingState({ label = "Loading" }: { label?: string }) {
     <Card interactive={false} className="px-5 py-10">
       <div className="flex items-center justify-center gap-3 text-sm text-ink-muted">
         <span className="relative flex h-3 w-3">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-70" />
+          
           <span className="relative inline-flex h-3 w-3 rounded-full bg-brand-bright" />
         </span>
         {label}…
@@ -367,7 +404,7 @@ export function Th({
   return (
     <th
       className={cn(
-        "border-b border-white/[0.12] px-4 py-3 text-2xs font-semibold uppercase tracking-wider text-ink-muted",
+        "border-b border-rule-strong px-4 py-3 text-2xs font-semibold uppercase tracking-wider text-ink-muted",
         align === "right" ? "text-right" : "text-left"
       )}
     >
@@ -388,7 +425,7 @@ export function Td({
   return (
     <td
       className={cn(
-        "border-b border-white/[0.05] px-4 py-3 text-ink-body",
+        "border-b border-rule px-4 py-3 text-ink-body",
         align === "right" ? "text-right" : "text-left",
         className
       )}
@@ -409,7 +446,7 @@ export function Tr({
   return (
     <tr
       className={cn(
-        "transition-colors duration-200 hover:bg-white/[0.045]",
+        "transition-colors duration-200 hover:bg-paper-sunken",
         className
       )}
     >
@@ -430,7 +467,7 @@ export function DataRow({
   hint?: string;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-white/[0.06] py-2.5 last:border-0">
+    <div className="flex items-baseline justify-between gap-4 border-b border-rule py-2.5 last:border-0">
       <div>
         <span className="text-[13px] text-ink-muted">{label}</span>
         {hint ? <p className="text-2xs text-ink-faint">{hint}</p> : null}
@@ -461,7 +498,7 @@ export function MonoId({
   return (
     <span
       className={cn(
-        "mono rounded bg-white/[0.05] px-1.5 py-0.5 text-ink-muted",
+        "mono rounded bg-paper-sunken px-1.5 py-0.5 text-ink-muted",
         className
       )}
       title={value}

@@ -3,6 +3,16 @@ import type { Config } from "tailwindcss";
 /** Wrap a CSS custom property so Tailwind can apply opacity modifiers. */
 const token = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
 
+/*
+ * The "Ledger" palette. See app/globals.css for why this is paper and ink
+ * rather than dark glass.
+ *
+ * Every colour here is a token reference, never a literal. The previous config
+ * carried a set of `surface-*` aliases pointing at hardcoded white-at-low-alpha
+ * values, which is how a theme change turns into an invisible-text bug: those
+ * aliases kept working after the canvas flipped, and produced white on white.
+ * Everything now resolves through a variable that a single palette swap moves.
+ */
 const config: Config = {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
@@ -11,67 +21,102 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        canvas: {
-          DEFAULT: token("canvas-base"),
-          deep: token("canvas-deep"),
-          raised: token("canvas-raised"),
+        /* Stock */
+        paper: {
+          DEFAULT: token("paper-sheet"),
+          canvas: token("paper-canvas"),
+          sheet: token("paper-sheet"),
+          sunken: token("paper-sunken"),
+          tint: token("paper-tint"),
+          "tint-strong": token("paper-tint-strong"),
         },
+
+        /* Printed rules */
+        rule: {
+          DEFAULT: token("rule"),
+          strong: token("rule-strong"),
+        },
+
+        /* Ink */
         ink: {
+          DEFAULT: token("ink-body"),
           strong: token("ink-strong"),
           body: token("ink-body"),
           muted: token("ink-muted"),
           faint: token("ink-faint"),
           inverse: token("ink-inverse"),
         },
+
+        /* Razorpay */
         brand: {
           DEFAULT: token("brand"),
           bright: token("brand-bright"),
           deep: token("brand-deep"),
+          ink: token("brand-ink"),
         },
-        cyanAccent: token("accent-cyan"),
-        violetAccent: token("accent-violet"),
+
+        /* Ledger ink for status */
         ok: { DEFAULT: token("ok"), deep: token("ok-deep") },
         warn: { DEFAULT: token("warn"), deep: token("warn-deep") },
         danger: { DEFAULT: token("danger"), deep: token("danger-deep") },
         info: token("info"),
 
+        cyanAccent: token("accent-cyan"),
+        violetAccent: token("accent-violet"),
+
         /*
-         * Legacy aliases. The previous light theme used `surface-*` and
-         * `line-*`; mapping them onto the new tokens means every existing page
-         * renders correctly on the dark canvas without a rewrite, and any
-         * stragglers degrade to a sensible glass surface rather than to white.
+         * Compatibility aliases for markup written against the old dark
+         * system. They now resolve to paper values, so an untouched page reads
+         * correctly instead of rendering white on white.
          */
+        canvas: {
+          DEFAULT: token("paper-canvas"),
+          deep: token("brand-deep"),
+          raised: token("paper-sheet"),
+        },
         surface: {
-          page: token("canvas-base"),
-          card: "rgb(255 255 255 / 0.045)",
-          sunken: "rgb(255 255 255 / 0.03)",
-          inverse: token("canvas-deep"),
+          page: token("paper-canvas"),
+          card: token("paper-sheet"),
+          sunken: token("paper-sunken"),
+          inverse: token("brand-deep"),
         },
         line: {
-          soft: "rgb(255 255 255 / 0.09)",
-          strong: "rgb(255 255 255 / 0.16)",
+          soft: token("rule"),
+          strong: token("rule-strong"),
         },
       },
+
+      fontFamily: {
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Georgia", "serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+      },
+
       fontSize: {
         "2xs": ["0.6875rem", { lineHeight: "1rem" }],
       },
+
       boxShadow: {
-        glass: "0 8px 32px rgb(2 6 18 / 0.55), 0 2px 8px rgb(2 6 18 / 0.4)",
-        lift: "0 20px 48px rgb(2 6 18 / 0.7), 0 4px 12px rgb(2 6 18 / 0.5)",
-        "glow-brand": "0 0 32px -6px rgb(var(--brand) / 0.55)",
-        "glow-ok": "0 0 28px -6px rgb(var(--ok) / 0.5)",
-        "glow-warn": "0 0 28px -6px rgb(var(--warn) / 0.5)",
-        "glow-danger": "0 0 28px -6px rgb(var(--danger) / 0.5)",
+        sheet: "var(--shadow-sheet)",
+        raised: "var(--shadow-raised)",
+        lift: "var(--shadow-lift)",
+        press: "var(--shadow-press)",
+        /* Old names, remapped. Paper does not glow. */
+        glass: "var(--shadow-sheet)",
+        "glow-brand": "var(--shadow-raised)",
+        "glow-ok": "var(--shadow-raised)",
+        "glow-warn": "var(--shadow-raised)",
+        "glow-danger": "var(--shadow-raised)",
       },
+
       borderRadius: {
-        card: "0.875rem",
-        panel: "1.25rem",
+        /* Paper is cut, not moulded. */
+        card: "3px",
+        panel: "4px",
       },
-      backdropBlur: {
-        glass: "20px",
-      },
+
       transitionTimingFunction: {
-        spring: "cubic-bezier(0.22, 1, 0.36, 1)",
+        spring: "cubic-bezier(0.2, 0.8, 0.3, 1)",
       },
     },
   },

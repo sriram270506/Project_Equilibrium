@@ -179,7 +179,7 @@ export default function PaymentDetailPage({
     <div className="fade-up max-w-5xl">
       <Link
         href="/dashboard/payments"
-        className="focusable mb-3 inline-flex text-[13px] font-medium text-brand-bright hover:underline"
+        className="focusable mb-3 inline-flex text-[13px] font-medium text-brand hover:underline"
       >
         ← All money movement
       </Link>

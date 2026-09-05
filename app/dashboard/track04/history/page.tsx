@@ -124,7 +124,7 @@ export default function Track04HistoryPage() {
             Press <strong>Run Track 04 evaluation</strong> on the{" "}
             <Link
               href="/dashboard/track04"
-              className="font-medium text-brand-bright hover:underline"
+              className="font-medium text-brand hover:underline"
             >
               benchmark page
             </Link>

@@ -19,18 +19,24 @@ const EXAMPLE_DEAL = computeDealEconomics({
 export default function LandingPage() {
   return (
     <main className="relative min-h-screen">
-      <div className="aurora-field aurora-drift" aria-hidden="true" />
+      <div className="ledger-field" aria-hidden="true" />
       <div className="relative z-10">
       {/* ------------------------------------------------------------- Hero */}
-      <section className="border-b border-white/[0.07]">
+      <section className="border-b border-rule">
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
           <p className="eyebrow text-brand">
             Marketplace working capital · Buildathon prototype
           </p>
 
-          <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
+          {/*
+            The masthead. Display serif at 60px, with the turn set in Razorpay
+            blue — the one place in the product where type is allowed to be the
+            whole design. A geometric sans here would have read as every other
+            fintech landing page.
+          */}
+          <h1 className="display mt-5 max-w-4xl text-[42px] leading-[1.05] text-ink-strong sm:text-[60px]">
             Small suppliers go broke waiting to get paid.
-            <span className="text-gradient block"> Not because they lack revenue.</span>
+            <span className="block text-brand"> Not because they lack revenue.</span>
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-muted">
@@ -40,7 +46,7 @@ export default function LandingPage() {
           </p>
 
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-ink-muted">
-            <strong className="font-semibold text-white">Equilibrium</strong>{" "}
+            <strong className="font-semibold text-ink-strong">Equilibrium</strong>{" "}
             predicts which suppliers are about to run short, offers them their
             own money early at a fair price, and then moves that money with the
             reliability guarantees a bank requires.
@@ -49,13 +55,13 @@ export default function LandingPage() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/dashboard/demo"
-              className="focusable btn-lift rounded-lg border border-white/20 bg-gradient-to-b from-brand-deep to-[rgb(29_78_216)] px-5 py-2.5 text-sm font-semibold text-white shadow-glow-brand"
+              className="focusable btn-lift rounded-[3px] border border-brand-deep bg-brand-deep hover:bg-brand px-5 py-2.5 text-sm font-semibold text-white"
             >
               Run the 5-minute demo
             </Link>
             <Link
               href="/dashboard"
-              className="focusable btn-lift rounded-lg border border-white/[0.16] bg-white/[0.06] px-5 py-2.5 text-sm font-semibold text-ink-strong backdrop-blur-md transition-colors hover:bg-white/[0.12]"
+              className="focusable btn-lift rounded-[3px] border border-rule-strong bg-paper-sheet px-5 py-2.5 text-sm font-semibold text-ink-strong transition-colors hover:bg-paper-tint"
             >
               Open the operations console
             </Link>
@@ -107,7 +113,7 @@ export default function LandingPage() {
       </section>
 
       {/* --------------------------------------------------- The hard part */}
-      <section className="border-y border-white/[0.07] bg-white/[0.02] backdrop-blur-xl">
+      <section className="border-y border-rule bg-paper-sunken">
         <div className="mx-auto max-w-6xl px-6 py-14">
           <p className="eyebrow">Why this is not a spreadsheet</p>
           <h2 className="mt-2 max-w-3xl text-2xl font-semibold tracking-tight text-ink-strong">
@@ -161,9 +167,9 @@ export default function LandingPage() {
           {FLOW.map((step, i) => (
             <li
               key={step.title}
-              className="glass glass-interactive glass-sheen flex gap-4 rounded-card p-4 backdrop-blur-glass backdrop-saturate-150"
+              className="glass glass-interactive glass-sheen flex gap-4 rounded-card p-4  backdrop-saturate-150"
             >
-              <span className="tabular flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand/40 bg-brand/[0.16] text-sm font-semibold text-brand-bright">
+              <span className="tabular flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand/40 bg-brand/[0.16] text-sm font-semibold text-brand">
                 {i + 1}
               </span>
               <div>
@@ -195,7 +201,7 @@ export default function LandingPage() {
       </section>
 
       {/* ---------------------------------------------------------- Footer */}
-      <footer className="border-t border-white/[0.07] bg-white/[0.02] backdrop-blur-xl">
+      <footer className="border-t border-rule bg-paper-sunken">
         <div className="mx-auto max-w-6xl px-6 py-8">
           <p className="text-[13px] leading-relaxed text-ink-muted">
             Demo build. Runs entirely on synthetic data against a mock payment
@@ -249,20 +255,20 @@ function ExampleStat({
   tone: "danger" | "ok" | "brand";
 }) {
   const toneClasses = {
-    danger: "border-danger/30 bg-danger/[0.10] shadow-glow-danger",
-    ok: "border-ok/30 bg-ok/[0.10] shadow-glow-ok",
-    brand: "border-brand/35 bg-brand/[0.12] shadow-glow-brand",
+    danger: "border-danger/30 bg-danger/[0.10]",
+    ok: "border-ok/30 bg-ok/[0.10]",
+    brand: "border-brand/35 bg-brand/[0.12]",
   }[tone];
 
   const headlineTone = {
     danger: "text-danger",
     ok: "text-ok",
-    brand: "text-brand-bright",
+    brand: "text-brand",
   }[tone];
 
   return (
     <div
-      className={`glass-interactive glass-sheen relative overflow-hidden rounded-card border p-5 backdrop-blur-xl ${toneClasses}`}
+      className={`glass-interactive glass-sheen relative overflow-hidden rounded-card border p-5 ${toneClasses}`}
     >
       <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
         {step}
@@ -277,7 +283,7 @@ function Guarantee({ title, body }: { title: string; body: string }) {
   return (
     <div>
       <h3 className="flex items-baseline gap-2 text-sm font-semibold text-ink-strong">
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-bright shadow-glow-brand" />
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-bright" />
         {title}
       </h3>
       <p className="mt-1.5 pl-3.5 text-[14px] leading-relaxed text-ink-body">

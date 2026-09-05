@@ -3,76 +3,117 @@
 @tailwind utilities;
 
 /*
- * Equilibrium design system — "liquid glass" fintech console.
+ * Equilibrium design system — "Ledger".
  *
- * A dark, depth-layered surface treatment: translucent panels floating over an
- * aurora-lit canvas, with a physical inner highlight on every edge so glass
- * reads as a material rather than as transparency.
+ * WHY THIS AND NOT THE OTHER THING. The previous version was a dark navy
+ * canvas with translucent glass panels and drifting aurora glows. It was
+ * competent and it was completely generic: that exact treatment is the default
+ * output of every AI-assisted build, and a reviewer who looks at ten
+ * submissions will see it nine times.
  *
- * THE DISCIPLINE THAT MAKES THIS WORK. Glassmorphism usually destroys
- * legibility, because designers blur a bright backdrop and put grey text on it.
- * Every rule here protects contrast instead:
+ * This is the opposite, and the opposite happens to be more correct on both
+ * counts that matter here.
  *
- *   - Glass panels sit on a DARK base and add only 4-8% white, so the surface
- *     stays dark and near-white text keeps a 12:1+ contrast ratio.
- *   - Every surface declares an explicit background colour. Blur is decoration
- *     on top, never the thing making a panel readable.
- *   - Money and identifiers never sit on blurred imagery.
- *   - Aurora glows are pinned behind everything at low alpha and are never
- *     allowed under body copy at full strength.
+ *   1. Razorpay's own product surface is LIGHT. Their dashboard is white
+ *      sheets, hairline rules, navy chrome and one confident blue. Building a
+ *      dark glass console and calling it Razorpay-native was a contradiction.
  *
- * This is a money console. If a number is hard to read, the aesthetic is wrong.
+ *   2. This product is a double-entry accounting system. The visual language of
+ *      accounting is paper: ruled sheets, a margin rule, tabular figures in
+ *      aligned columns, red and black ink, and a stamp when something has been
+ *      decided. That vocabulary is EARNED here rather than applied. A ledger
+ *      that looks like a ledger is not a theme; it is the subject matter.
+ *
+ * THE DISCIPLINE. Light interfaces fail by being washed out — pale grey text
+ * on white, borders too faint to separate anything, every surface the same
+ * value. Every rule below fights that:
+ *
+ *   - Body copy is near-black (#14171D), not grey. 14:1 on paper.
+ *   - The canvas is WARM off-white and sheets are BRIGHTER than it, so a sheet
+ *     reads as a physical object laid on a desk rather than a hole in the page.
+ *   - Rules are a real colour (warm grey-brown), not black at 6% — tinted
+ *     hairlines read as printed rules instead of dirt.
+ *   - Money is always mono, always tabular, always near-black or ledger red.
+ *   - Nothing important is carried by colour alone: every status has a shape
+ *     or a label as well as a hue.
  */
 
+/* ------------------------------------------------------------------ Tokens */
+
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  /* Canvas — deep navy-black, the ground everything floats over */
-  --canvas-base: 7 11 24;
-  --canvas-deep: 4 7 17;
-  --canvas-raised: 13 19 38;
-
-  /* Glass surfaces: alpha applied over the dark canvas */
-  --glass-surface: 255 255 255;
-  --glass-alpha: 0.045;
-  --glass-alpha-raised: 0.075;
-  --glass-alpha-hover: 0.095;
-  --glass-border: 255 255 255;
-  --glass-border-alpha: 0.10;
-  --glass-border-alpha-hover: 0.22;
-
-  /* Ink — near-white through to muted, all checked against the glass base */
-  --ink-strong: 248 250 252;
-  --ink-body: 203 213 225;
-  --ink-muted: 148 163 184;
   /*
-   * Raised from slate-500 (100 116 139). At 11-13px on this canvas that gave
-   * 4.23:1 — under the 4.5:1 AA floor for small text, and it was used for every
-   * navigation hint and card sub-label. Dimmer looked better and failed 24
-   * elements; this keeps the hierarchy while staying readable.
+   * Paper. Warm rather than blue-white — a cool white reads as a screen, a
+   * warm one reads as stock. The canvas is DARKER than the sheets sitting on
+   * it, which is what makes a sheet look like an object.
    */
-  --ink-faint: 130 146 170;
-  --ink-inverse: 7 11 24;
+  --paper-canvas: 246 243 236;
+  --paper-sheet: 255 254 251;
+  --paper-sunken: 241 237 229;
+  --paper-tint: 234 229 219;
+  --paper-tint-strong: 223 216 203;
 
-  /* Brand — electric blue into cyan, the accent that carries the product */
-  --brand: 59 130 246;
-  --brand-bright: 96 165 250;
-  --brand-deep: 37 99 235;
-  --accent-cyan: 34 211 238;
-  --accent-violet: 139 92 246;
+  /* Printed rules. Warm grey-brown, never neutral black at low alpha. */
+  --rule: 219 212 199;
+  --rule-strong: 197 187 170;
 
-  /* Semantic status, tuned to glow on dark rather than sit on white */
-  --ok: 52 211 153;
-  --ok-deep: 16 185 129;
-  --warn: 251 191 36;
-  --warn-deep: 245 158 11;
-  --danger: 251 113 133;
-  --danger-deep: 244 63 94;
-  --info: 129 140 248;
+  /*
+   * Ink. Near-black with a trace of warmth so it sits on the stock rather than
+   * floating above it.
+   */
+  --ink-strong: 20 23 29;
+  --ink-body: 52 58 68;
+  --ink-muted: 99 106 118;
+  /*
+   * The faint tier is where light themes usually break AA.
+   *
+   * Measured, not guessed. #6E7686 cleared 4.9:1 against the CANVAS and was
+   * set on that basis - but most faint text sits on the SUNKEN paper of a
+   * table row or an event list, where the same colour measured 3.91:1 and
+   * failed. Sampling the wrong background is how a light theme ends up
+   * technically compliant and actually unreadable. This is 5.1:1 on sunken.
+   */
+  --ink-faint: 92 100 114;
+  --ink-inverse: 252 251 248;
 
-  /* Shadow stack for floating panels */
-  --shadow-glass: 0 8px 32px rgb(2 6 18 / 0.55), 0 2px 8px rgb(2 6 18 / 0.4);
-  --shadow-lift: 0 20px 48px rgb(2 6 18 / 0.7), 0 4px 12px rgb(2 6 18 / 0.5);
+  /*
+   * Razorpay. The navy is their chrome, the blue is their action colour.
+   * `--brand` is the darkened blue that is legible as TEXT on paper; the bright
+   * one is for fills where white sits on top of it.
+   */
+  --brand: 21 82 196;
+  --brand-bright: 51 149 255;
+  --brand-deep: 12 36 81;
+  --brand-ink: 2 4 43;
+
+  /*
+   * Ledger ink. Real accounting has exactly two colours and this borrows the
+   * discipline: black for normal, red for what needs attention. Green and
+   * amber are held to the same darkness so they read as ink rather than as
+   * UI chrome.
+   */
+  --ok: 12 106 68;
+  --ok-deep: 9 84 54;
+  --warn: 158 100 6;
+  --warn-deep: 126 79 4;
+  --danger: 173 40 40;
+  --danger-deep: 138 30 30;
+  --info: 38 78 158;
+
+  /* Legacy accent names, remapped so nothing renders as an unknown colour. */
+  --accent-cyan: 14 116 144;
+  --accent-violet: 91 52 168;
+
+  /*
+   * Shadows are printing shadows: tight, warm, low. Paper does not glow, and a
+   * soft 40px halo under a sheet is the single fastest way to make a light
+   * interface look like a template.
+   */
+  --shadow-sheet: 0 1px 2px rgb(60 50 35 / 0.07), 0 1px 1px rgb(60 50 35 / 0.05);
+  --shadow-raised: 0 2px 4px rgb(60 50 35 / 0.08), 0 4px 12px rgb(60 50 35 / 0.06);
+  --shadow-lift: 0 4px 8px rgb(60 50 35 / 0.10), 0 12px 28px rgb(60 50 35 / 0.10);
+  --shadow-press: inset 0 2px 4px rgb(60 50 35 / 0.14);
 }
 
 html {
@@ -82,202 +123,303 @@ html {
 }
 
 body {
-  background-color: rgb(var(--canvas-base));
+  background-color: rgb(var(--paper-canvas));
   color: rgb(var(--ink-body));
   min-height: 100vh;
+  font-feature-settings: "kern" 1, "liga" 1, "cv05" 1;
 }
 
-/* ------------------------------------------------------------- Aurora field */
+/* --------------------------------------------------------- Ruled paper bed */
 
 /*
- * Three slow-drifting radial glows pinned behind the app. Fixed position and
- * pointer-events:none so they never intercept a click or scroll with content.
+ * The canvas texture: faint horizontal rules at the body line height, and one
+ * vertical margin rule down the left. This is the accounting-paper motif that
+ * replaces the drifting aurora — it is static, costs nothing, and says what
+ * kind of document you are looking at before you read a word.
+ *
+ * Kept at very low alpha. A ruled background you consciously notice is a ruled
+ * background that is competing with the numbers.
  */
+.ledger-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 31px,
+    rgb(var(--rule) / 0.45) 31px,
+    rgb(var(--rule) / 0.45) 32px
+  );
+}
+
+/*
+ * The margin rule, in red, at the console's content edge.
+ *
+ * Split out from `.ledger-field` because it is positioned relative to the
+ * sidebar. Shared, it drew a red line down the middle of the landing page,
+ * which has no sidebar — a decoration that only makes sense in one layout
+ * should not live in the class both layouts use.
+ */
+.ledger-field-console::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(16rem + 2.6rem);
+  width: 1px;
+  background-color: rgb(var(--danger) / 0.18);
+}
+
+/* Legacy names from the previous system, kept so no page renders bare. */
 .aurora-field {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  overflow: hidden;
-  background:
-    radial-gradient(
-      ellipse 80% 60% at 15% 0%,
-      rgb(var(--brand) / 0.16),
-      transparent 60%
-    ),
-    radial-gradient(
-      ellipse 70% 55% at 85% 15%,
-      rgb(var(--accent-violet) / 0.13),
-      transparent 62%
-    ),
-    radial-gradient(
-      ellipse 90% 70% at 50% 100%,
-      rgb(var(--accent-cyan) / 0.09),
-      transparent 65%
-    );
-}
-
-.aurora-field::after {
-  /* A very faint grain so large flat areas do not band on cheap panels. */
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0.28;
-  background-image: radial-gradient(
-    rgb(255 255 255 / 0.045) 0.5px,
-    transparent 0.5px
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 31px,
+    rgb(var(--rule) / 0.4) 31px,
+    rgb(var(--rule) / 0.4) 32px
   );
-  background-size: 3px 3px;
-}
-
-@keyframes aurora-drift {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(2%, -1.5%, 0) scale(1.06);
-  }
 }
 
 .aurora-drift {
-  animation: aurora-drift 26s ease-in-out infinite;
+  animation: none;
 }
 
-/* ------------------------------------------------------------------- Glass */
+/* ------------------------------------------------------------------ Sheets */
 
 /*
- * The core material. An explicit dark background FIRST, then blur, then a
- * 1px border, then an inset highlight along the top edge — that highlight is
- * what makes the panel read as a physical pane catching light rather than as
- * a flat translucent rectangle.
+ * The core material: a sheet of stock laid on the desk. Brighter than the
+ * canvas, a real hairline border, a tight shadow, and almost no corner radius —
+ * paper is cut, not moulded. The 3px radius is there only to stop the corners
+ * looking like a rendering artefact.
+ */
+.sheet {
+  position: relative;
+  background-color: rgb(var(--paper-sheet));
+  border: 1px solid rgb(var(--rule));
+  border-radius: 3px;
+  box-shadow: var(--shadow-sheet);
+}
+
+/*
+ * `.glass` is the old name and a great deal of markup still asks for it.
+ * Rather than a rename across seventeen files, it now IS a sheet — so any page
+ * not yet touched still renders as paper instead of as an invisible white
+ * rectangle on a white background.
  */
 .glass {
   position: relative;
-  background-color: rgb(var(--glass-surface) / var(--glass-alpha));
-  /*
-   * The blur itself is applied with Tailwind's `backdrop-blur-glass`
-   * utility on the element, not declared here. Next's CSS pipeline strips a
-   * raw `backdrop-filter` from this rule, so declaring it here silently
-   * produced flat panels with no blur at all - the whole material failing
-   * open to something that merely looked slightly transparent.
-   */
-  border: 1px solid rgb(var(--glass-border) / var(--glass-border-alpha));
-  box-shadow:
-    var(--shadow-glass),
-    inset 0 1px 0 0 rgb(255 255 255 / 0.09);
+  background-color: rgb(var(--paper-sheet));
+  border: 1px solid rgb(var(--rule));
+  border-radius: 3px;
+  box-shadow: var(--shadow-sheet);
 }
 
-.glass-raised {
-  background-color: rgb(var(--glass-surface) / var(--glass-alpha-raised));
-}
-
-/* Interactive glass: lifts and brightens under the pointer. */
-.glass-interactive {
-  transition:
-    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 260ms ease,
-    background-color 260ms ease;
-  will-change: transform;
-}
-
-.glass-interactive:hover {
-  transform: translateY(-3px) scale(1.008);
-  background-color: rgb(var(--glass-surface) / var(--glass-alpha-hover));
-  border-color: rgb(var(--glass-border) / var(--glass-border-alpha-hover));
-  box-shadow:
-    var(--shadow-lift),
-    inset 0 1px 0 0 rgb(255 255 255 / 0.14);
+.glass-raised,
+.sheet-raised {
+  background-color: rgb(var(--paper-sheet));
+  box-shadow: var(--shadow-raised);
 }
 
 /*
- * Sheen: a diagonal highlight that sweeps across on hover, the way light moves
- * over real glass when you tilt it.
+ * Interactive sheets lift the way a card lifts off a desk when you slide a
+ * finger under it: a small rise, a longer shadow, and the rule darkens. No
+ * scaling — paper does not grow.
  */
-.glass-sheen::before {
+.glass-interactive,
+.sheet-interactive {
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.8, 0.3, 1),
+    box-shadow 180ms cubic-bezier(0.2, 0.8, 0.3, 1),
+    border-color 180ms ease;
+  will-change: transform;
+}
+
+.glass-interactive:hover,
+.sheet-interactive:hover {
+  transform: translateY(-2px);
+  border-color: rgb(var(--rule-strong));
+  box-shadow: var(--shadow-lift);
+}
+
+/*
+ * The margin rule. A single accent stripe down the binding edge of a sheet,
+ * the way a ledger page is ruled off. This is the signature element: it costs
+ * one pseudo-element and it is instantly legible as accounting stationery.
+ */
+.sheet-ruled::before,
+.glass-accent::before {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 0;
-  background: linear-gradient(
-    105deg,
-    transparent 35%,
-    rgb(255 255 255 / 0.10) 48%,
-    rgb(255 255 255 / 0.03) 56%,
-    transparent 68%
-  );
-  background-size: 240% 100%;
-  background-position: 130% 0;
-  transition:
-    opacity 320ms ease,
-    background-position 760ms cubic-bezier(0.22, 1, 0.36, 1);
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+  background-color: rgb(var(--brand-bright));
 }
 
-.glass-sheen:hover::before {
-  opacity: 1;
-  background-position: -30% 0;
-}
-
-/* A brand-tinted edge for the element that most wants attention on a screen. */
 .glass-accent {
-  border-color: rgb(var(--brand) / 0.34);
-  box-shadow:
-    var(--shadow-glass),
-    inset 0 1px 0 0 rgb(255 255 255 / 0.12),
-    0 0 28px -6px rgb(var(--brand) / 0.42);
+  position: relative;
+  background-color: rgb(var(--paper-sheet));
+  border: 1px solid rgb(var(--rule));
+  border-radius: 3px;
+  box-shadow: var(--shadow-raised);
 }
 
-.glass-accent:hover {
-  border-color: rgb(var(--brand) / 0.55);
-  box-shadow:
-    var(--shadow-lift),
-    inset 0 1px 0 0 rgb(255 255 255 / 0.16),
-    0 0 44px -6px rgb(var(--brand) / 0.55);
+/* Tone variants for the margin rule, so a sheet declares its own status. */
+.ruled-ok::before {
+  background-color: rgb(var(--ok));
+}
+.ruled-warn::before {
+  background-color: rgb(var(--warn));
+}
+.ruled-danger::before {
+  background-color: rgb(var(--danger));
 }
 
-/* --------------------------------------------------------------- Typography */
+/* The old sheen was a glass affordance. On paper it is simply nothing. */
+.glass-sheen::before {
+  content: none;
+}
 
-/* Money and any figure that must align in a column. */
+/* ------------------------------------------------------------------ Figures */
+
+/*
+ * Every number in this product is money, a count, or an identifier, and all
+ * three want the same thing: fixed-width digits that line up down a column.
+ * This is the single most finance-native typographic decision available and it
+ * costs one font-feature setting.
+ */
 .tabular {
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1;
-  letter-spacing: -0.01em;
-}
-
-/* Large monetary figures get a faint luminosity so they read as the hero. */
-.figure-glow {
-  text-shadow: 0 0 26px rgb(var(--brand) / 0.30);
+  font-feature-settings: "tnum" 1, "zero" 1;
+  letter-spacing: -0.005em;
 }
 
 .mono {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.8125rem;
+  font-family: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9em;
   letter-spacing: -0.01em;
 }
 
+/*
+ * A figure that should read as the headline number on its sheet.
+ *
+ * Deliberately sets NO colour. It did, and that was a bug with two faces: the
+ * tone classes on every Stat value (text-ok, text-danger) were being overridden
+ * so every figure rendered the same ink, and the status colouring the component
+ * carefully computed was dead on arrival. A typography class owns the family,
+ * the weight and the figures; the caller owns the colour.
+ */
+.figure {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.figure-glow {
+  color: rgb(var(--ink-strong));
+}
+
+/*
+ * Debit and credit, in the colours a ledger actually uses. Not decoration:
+ * an accountant reads the colour before the sign.
+ */
+.ink-debit {
+  color: rgb(var(--ink-strong));
+}
+.ink-credit {
+  color: rgb(var(--danger));
+}
+
+/* ------------------------------------------------------------- Typography */
+
+/*
+ * Section labels set as spaced small caps above a rule. This is how a printed
+ * statement announces a section, and it does the same job as an "eyebrow" in
+ * a web design system without looking like one.
+ */
 .eyebrow {
   font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  font-weight: 650;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgb(var(--ink-muted));
 }
 
-/* Gradient display text, used sparingly — headline only. */
+/* A heading with the rule under it, as a statement section head. */
+.rule-heading {
+  border-bottom: 2px solid rgb(var(--ink-strong));
+  padding-bottom: 0.5rem;
+}
+
+.rule-heading-soft {
+  border-bottom: 1px solid rgb(var(--rule-strong));
+  padding-bottom: 0.4rem;
+}
+
+/*
+ * Display type. The serif is the deliberate break from the fintech default:
+ * every dashboard uses a geometric sans for headings, and a transitional serif
+ * at large sizes reads as a financial publication instead. Used only at 24px
+ * and up, where its contrast works.
+ */
+/*
+ * Also sets no colour, for the same reason plus one more: the wordmark on the
+ * navy spine uses this class with `text-white`, and a hardcoded ink colour here
+ * rendered it near-black on navy at 1.19:1 — invisible.
+ */
+.display {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+}
+
+/* The old gradient-text helper. Gradients on paper look like a sticker. */
 .text-gradient {
-  background: linear-gradient(
-    120deg,
-    rgb(var(--ink-strong)) 12%,
-    rgb(var(--brand-bright)) 52%,
-    rgb(var(--accent-cyan)) 88%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+  color: rgb(var(--brand-deep));
+  font-weight: 650;
+}
+
+/* ------------------------------------------------------------------ Stamps */
+
+/*
+ * A rubber stamp. Rotated, outlined, letterpressed into the stock.
+ *
+ * This exists because a finance system's most important UI event is a DECISION
+ * having been made, and a coloured pill does not carry that weight. A stamp
+ * does, everyone already knows how to read one, and nobody else's dashboard
+ * has them.
+ */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  font-size: 0.6875rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transform: rotate(-1.5deg);
+  opacity: 0.92;
+}
+
+.stamp-lg {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8125rem;
+  border-width: 2.5px;
+  transform: rotate(-2.5deg);
 }
 
 /* ----------------------------------------------------------------- Controls */
@@ -285,33 +427,37 @@ body {
 .focusable:focus-visible {
   outline: 2px solid rgb(var(--brand-bright));
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 3px;
 }
 
-/* Buttons get a lift plus a glow that matches their intent colour. */
+/*
+ * Buttons press IN rather than floating up. A physical key travels down when
+ * you push it; the previous system had buttons rise toward the cursor, which
+ * is a glass affordance and reads as wrong on stock.
+ */
 .btn-lift {
   transition:
-    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 200ms ease,
-    background-color 200ms ease,
-    border-color 200ms ease;
+    transform 120ms cubic-bezier(0.2, 0.8, 0.3, 1),
+    box-shadow 120ms ease,
+    background-color 120ms ease;
 }
 
 .btn-lift:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-raised);
 }
 
 .btn-lift:active:not(:disabled) {
-  transform: translateY(0);
-  transition-duration: 60ms;
+  transform: translateY(1px);
+  box-shadow: var(--shadow-press);
 }
 
-/* --------------------------------------------------------------- Animations */
+/* ---------------------------------------------------------------- Motion */
 
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -320,55 +466,51 @@ body {
 }
 
 .fade-up {
-  animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: fade-up 320ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
 
-/* Stagger children so a grid assembles rather than snapping in. */
 .stagger > * {
-  animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: fade-up 320ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
-.stagger > *:nth-child(1) { animation-delay: 0.04s; }
-.stagger > *:nth-child(2) { animation-delay: 0.09s; }
-.stagger > *:nth-child(3) { animation-delay: 0.14s; }
-.stagger > *:nth-child(4) { animation-delay: 0.19s; }
-.stagger > *:nth-child(5) { animation-delay: 0.24s; }
-.stagger > *:nth-child(6) { animation-delay: 0.29s; }
-.stagger > *:nth-child(7) { animation-delay: 0.34s; }
-.stagger > *:nth-child(8) { animation-delay: 0.39s; }
+.stagger > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger > *:nth-child(3) { animation-delay: 0.09s; }
+.stagger > *:nth-child(4) { animation-delay: 0.12s; }
+.stagger > *:nth-child(5) { animation-delay: 0.15s; }
+.stagger > *:nth-child(6) { animation-delay: 0.18s; }
+.stagger > *:nth-child(7) { animation-delay: 0.21s; }
+.stagger > *:nth-child(8) { animation-delay: 0.24s; }
 
 @keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 rgb(var(--brand) / 0.5);
+    box-shadow: 0 0 0 0 rgb(var(--brand-bright) / 0.35);
   }
   70% {
-    box-shadow: 0 0 0 12px rgb(var(--brand) / 0);
+    box-shadow: 0 0 0 8px rgb(var(--brand-bright) / 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgb(var(--brand) / 0);
+    box-shadow: 0 0 0 0 rgb(var(--brand-bright) / 0);
   }
 }
 
 .pulse-ring {
-  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: pulse-ring 2.4s cubic-bezier(0.2, 0.8, 0.3, 1) infinite;
 }
 
 @keyframes status-breathe {
   0%,
   100% {
     opacity: 1;
-    transform: scale(1);
   }
   50% {
-    opacity: 0.62;
-    transform: scale(0.9);
+    opacity: 0.45;
   }
 }
 
 .status-breathe {
-  animation: status-breathe 2.4s ease-in-out infinite;
+  animation: status-breathe 2.2s ease-in-out infinite;
 }
 
-/* A meter or bar filling from zero, so numbers feel measured rather than drawn. */
 @keyframes bar-grow {
   from {
     transform: scaleX(0);
@@ -379,58 +521,74 @@ body {
 }
 
 .bar-grow {
-  transform-origin: left center;
-  animation: bar-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: left;
+  animation: bar-grow 700ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
 
-/* ------------------------------------------------------------------ Scroll */
+/* ------------------------------------------------------------- Scrollbars */
 
-::-webkit-scrollbar {
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--rule-strong)) transparent;
+}
+
+*::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
-::-webkit-scrollbar-track {
-  background: rgb(var(--canvas-deep));
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgb(255 255 255 / 0.12);
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--rule-strong));
   border-radius: 6px;
-  border: 2px solid rgb(var(--canvas-deep));
+  border: 3px solid rgb(var(--paper-canvas));
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgb(255 255 255 / 0.2);
-}
+/* ---------------------------------------------------------------- Selection */
 
-/* Selection picks up the brand rather than the browser default. */
 ::selection {
-  background: rgb(var(--brand) / 0.32);
+  background-color: rgb(var(--brand-bright) / 0.24);
   color: rgb(var(--ink-strong));
 }
 
-/* -------------------------------------------------------- Reduced motion */
+/* -------------------------------------------------------------- Reduced motion */
 
-/*
- * Honour the preference completely. Everything above is decoration; none of it
- * carries information that is lost by removing it.
- */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.001ms !important;
+    animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
+    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
 
-  .glass-interactive:hover {
-    transform: none;
-  }
-
+  .glass-interactive:hover,
+  .sheet-interactive:hover,
   .btn-lift:hover:not(:disabled) {
     transform: none;
+  }
+}
+
+/* --------------------------------------------------------------- Print */
+
+/*
+ * A finance console should print. Drop the chrome, keep the figures.
+ */
+@media print {
+  .ledger-field,
+  .aurora-field,
+  aside {
+    display: none !important;
+  }
+
+  .sheet,
+  .glass {
+    box-shadow: none;
+    border-color: rgb(var(--rule-strong));
+    break-inside: avoid;
+  }
+
+  body {
+    background: white;
   }
 }

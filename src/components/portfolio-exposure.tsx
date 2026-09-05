@@ -159,7 +159,7 @@ export function PortfolioExposure({
 
         {/* Utilisation as a bar, since that is the number treasury watches. */}
         <div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-paper-tint">
             <div
               className={cn(
                 "bar-grow h-full rounded-full",

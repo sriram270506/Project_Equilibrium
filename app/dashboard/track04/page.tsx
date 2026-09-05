@@ -157,9 +157,9 @@ const PIPELINE = [
 ];
 
 const KIND_STYLE: Record<string, string> = {
-  INPUT: "border-white/15 bg-white/[0.04] text-ink-body",
+  INPUT: "border-white/15 bg-paper-sunken text-ink-body",
   DETERMINISTIC: "border-info/30 bg-info/[0.10] text-info",
-  STATISTICAL: "border-brand/30 bg-brand/[0.10] text-brand-bright",
+  STATISTICAL: "border-brand/30 bg-brand/[0.10] text-brand",
   POLICY: "border-warn/30 bg-warn/[0.10] text-warn",
   HUMAN: "border-ok/30 bg-ok/[0.10] text-ok",
 };
@@ -256,7 +256,7 @@ export default function Track04Page() {
               type="button"
               disabled={running}
               onClick={runEvaluation}
-              className="focusable btn-lift rounded-lg border border-white/20 bg-gradient-to-b from-brand-deep to-[rgb(29_78_216)] px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-glow-brand disabled:opacity-60"
+              className="focusable btn-lift rounded-[3px] border border-brand-deep bg-brand-deep hover:bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-white disabled:opacity-60"
             >
               {running ? "Running..." : "Run Track 04 evaluation"}
             </button>
@@ -331,8 +331,8 @@ If non-zero: ${c.consequence}`}
                       className={cn(
                         "rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
                         c.source === "LIVE_SYSTEM"
-                          ? "border-brand/30 bg-brand/[0.10] text-brand-bright"
-                          : "border-white/15 bg-white/[0.05] text-ink-muted"
+                          ? "border-brand/30 bg-brand/[0.10] text-brand"
+                          : "border-white/15 bg-paper-sunken text-ink-muted"
                       )}
                     >
                       {c.source === "LIVE_SYSTEM" ? "live system" : "benchmark"}
@@ -606,7 +606,7 @@ If non-zero: ${c.consequence}`}
                     {b.correct}/{b.total} · {pct(b.accuracy)}
                   </span>
                 </div>
-                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-paper-tint">
                   <div
                     className={cn(
                       "h-full rounded-full transition-[width] duration-700",
@@ -806,7 +806,7 @@ If non-zero: ${c.consequence}`}
                 </p>
               </div>
 
-              <div className="rounded-lg border border-white/[0.10] bg-white/[0.03] px-4 py-3">
+              <div className="rounded-lg border border-rule bg-paper-sunken px-4 py-3">
                 <p className="text-2xs uppercase tracking-wide text-ink-muted">
                   Ground truth ({openEvidence.groundTruthLabel})
                 </p>

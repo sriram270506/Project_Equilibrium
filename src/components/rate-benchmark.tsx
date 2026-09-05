@@ -64,7 +64,7 @@ export function RateBenchmarkCard({ benchmark }: { benchmark: RateBenchmark }) {
         <div>
           <div className="relative h-12">
             {/* Full range track */}
-            <div className="absolute inset-x-0 top-5 h-2 rounded-full bg-white/[0.06]" />
+            <div className="absolute inset-x-0 top-5 h-2 rounded-full bg-paper-tint" />
 
             {/* The TReDS band */}
             <div
@@ -145,7 +145,7 @@ function Cell({
   hint?: string;
 }) {
   return (
-    <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+    <div className="rounded-lg border border-rule bg-paper-sunken px-4 py-3">
       <p className="text-2xs font-medium uppercase tracking-wider text-ink-muted">
         {label}
       </p>

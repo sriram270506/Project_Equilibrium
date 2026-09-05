@@ -73,7 +73,7 @@ export function ApprovalEffect({ delta }: { delta: EffectDelta }) {
               <span
                 className={cn(
                   "tabular",
-                  leg.debitPaise > 0 ? "text-brand-bright" : "text-ok"
+                  leg.debitPaise > 0 ? "text-brand" : "text-ok"
                 )}
               >
                 {leg.debitPaise > 0 ? "Dr " : "Cr "}
@@ -120,10 +120,10 @@ export function ApprovalEffect({ delta }: { delta: EffectDelta }) {
     tone: pctAfter > 85 ? "warn" : "brand",
     detail: (
       <div className="space-y-2">
-        <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
+        <div className="relative h-2 w-full overflow-hidden rounded-full bg-paper-tint">
           {/* Where it was, held behind the new value. */}
           <div
-            className="absolute inset-y-0 left-0 rounded-full bg-white/[0.14]"
+            className="absolute inset-y-0 left-0 rounded-full bg-paper-tint-strong"
             style={{ width: `${Math.min(pctBefore, 100)}%` }}
           />
           <div
@@ -234,7 +234,7 @@ export function ApprovalEffect({ delta }: { delta: EffectDelta }) {
         action={
           <Link
             href={`/dashboard/payments/${delta.paymentIntentId}`}
-            className="focusable btn-lift rounded-lg border border-white/20 bg-gradient-to-b from-brand-deep to-[rgb(29_78_216)] px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-glow-brand"
+            className="focusable btn-lift rounded-[3px] border border-brand-deep bg-brand-deep hover:bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-white"
           >
             Trace the payment →
           </Link>
@@ -261,7 +261,7 @@ export function ApprovalEffect({ delta }: { delta: EffectDelta }) {
                 <div className="flex items-start gap-3">
                   <span
                     className={cn(
-                      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white",
+                      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-ink-strong",
                       step.tone === "ok" && "bg-ok",
                       step.tone === "brand" && "bg-brand",
                       step.tone === "warn" && "bg-warn"

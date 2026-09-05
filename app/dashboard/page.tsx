@@ -244,7 +244,7 @@ export default function OverviewPage() {
             action={
               <Link
                 href="/dashboard/payments"
-                className="focusable text-[13px] font-medium text-brand-bright hover:underline"
+                className="focusable text-[13px] font-medium text-brand hover:underline"
               >
                 View all
               </Link>
@@ -255,14 +255,14 @@ export default function OverviewPage() {
               Approve an offer from{" "}
               <Link
                 href="/dashboard/opportunities"
-                className="font-medium text-brand-bright hover:underline"
+                className="font-medium text-brand hover:underline"
               >
                 suppliers at risk
               </Link>
               , or run the{" "}
               <Link
                 href="/dashboard/demo"
-                className="font-medium text-brand-bright hover:underline"
+                className="font-medium text-brand hover:underline"
               >
                 guided walkthrough
               </Link>{" "}
@@ -285,7 +285,7 @@ export default function OverviewPage() {
                     <Td>
                       <Link
                         href={`/dashboard/payments/${p.id}`}
-                        className="focusable font-medium text-ink-strong hover:text-brand-bright hover:underline"
+                        className="focusable font-medium text-ink-strong hover:text-brand hover:underline"
                       >
                         {p.supplierName}
                       </Link>

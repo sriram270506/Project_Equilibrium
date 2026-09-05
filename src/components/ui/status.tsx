@@ -3,23 +3,22 @@ import { cn } from "@/src/lib/utils";
 
 type Tone = "neutral" | "ok" | "warn" | "danger" | "info" | "brand";
 
+/*
+ * Ink on a light wash of itself. Every text colour here is one of the ledger
+ * inks, all of which are dark enough to clear 4.5:1 on their own 8% tint.
+ *
+ * The previous version glowed. A glow is the correct affordance on a dark
+ * canvas and completely wrong on paper: printed marks do not emit light, and a
+ * table of thirty glowing pills is the exact look this redesign exists to get
+ * away from.
+ */
 const toneClasses: Record<Tone, string> = {
-  neutral: "bg-white/[0.07] text-ink-body border-white/[0.14]",
-  ok: "bg-ok/[0.14] text-ok border-ok/35",
-  warn: "bg-warn/[0.14] text-warn border-warn/35",
-  danger: "bg-danger/[0.14] text-danger border-danger/35",
-  info: "bg-info/[0.14] text-info border-info/35",
-  brand: "bg-brand/[0.16] text-brand-bright border-brand/40",
-};
-
-/** A matching glow, so severity is legible at a glance across a dense table. */
-const toneGlow: Record<Tone, string> = {
-  neutral: "",
-  ok: "shadow-[0_0_16px_-4px_rgb(var(--ok)/0.6)]",
-  warn: "shadow-[0_0_16px_-4px_rgb(var(--warn)/0.6)]",
-  danger: "shadow-[0_0_16px_-4px_rgb(var(--danger)/0.6)]",
-  info: "shadow-[0_0_16px_-4px_rgb(var(--info)/0.6)]",
-  brand: "shadow-[0_0_16px_-4px_rgb(var(--brand)/0.6)]",
+  neutral: "bg-paper-tint text-ink-body border-rule-strong",
+  ok: "bg-ok/[0.09] text-ok border-ok/45",
+  warn: "bg-warn/[0.10] text-warn border-warn/45",
+  danger: "bg-danger/[0.09] text-danger border-danger/45",
+  info: "bg-info/[0.09] text-info border-info/45",
+  brand: "bg-brand/[0.09] text-brand border-brand/45",
 };
 
 /**
@@ -197,12 +196,20 @@ export function StatusChip({
   return (
     <span
       title={entry?.meaning}
+      /*
+       * A stamp, not a pill.
+       *
+       * The most important event in a finance console is a DECISION having
+       * been recorded, and a rounded coloured pill does not carry that. A
+       * stamp does - everyone already knows how to read one, it survives being
+       * printed in black and white, and the slight rotation makes a column of
+       * them scan as marks on a page rather than as UI furniture.
+       */
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border font-medium whitespace-nowrap backdrop-blur-md",
-        "transition-transform duration-200 ease-spring hover:scale-105",
-        size === "sm" ? "px-2.5 py-0.5 text-2xs" : "px-3 py-1 text-xs",
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] border-2 font-bold uppercase",
+        "-rotate-[1.5deg] tracking-[0.08em] transition-transform duration-150 hover:rotate-0",
+        size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-2xs",
         toneClasses[tone],
-        toneGlow[tone],
         className
       )}
     >
@@ -236,9 +243,9 @@ export function SeverityBadge({ severity }: { severity: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded border px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide backdrop-blur-md",
-        toneClasses[tone],
-        toneGlow[tone]
+        "inline-flex items-center rounded-[3px] border-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]",
+        "-rotate-[1.5deg]",
+        toneClasses[tone]
       )}
     >
       {severity}
@@ -269,13 +276,13 @@ export function LifecycleRail({
           <li key={step} className="flex items-center gap-1">
             <span
               className={cn(
-                "rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-md transition-all duration-300",
+                "rounded-[3px] border px-3 py-1 text-xs font-medium transition-all duration-300",
                 active &&
-                  "border-brand/60 bg-brand/25 text-brand-bright shadow-glow-brand scale-105",
+                  "border-brand/60 bg-brand/25 text-brand scale-105",
                 done && "border-ok/35 bg-ok/[0.14] text-ok",
                 !active &&
                   !done &&
-                  "border-white/[0.1] bg-white/[0.04] text-ink-faint"
+                  "border-rule bg-paper-sunken text-ink-faint"
               )}
             >
               {statusLabel(step)}
@@ -284,7 +291,7 @@ export function LifecycleRail({
               <span
                 className={cn(
                   "h-px w-5 transition-colors duration-300",
-                  done ? "bg-ok/50" : "bg-white/[0.14]"
+                  done ? "bg-ok/50" : "bg-paper-tint-strong"
                 )}
               />
             ) : null}
@@ -333,7 +340,7 @@ export function Timeline({
                 )}
               />
               {!isLast ? (
-                <span className="w-px flex-1 bg-gradient-to-b from-white/[0.16] to-white/[0.04]" />
+                <span className="w-px flex-1 bg-rule" />
               ) : null}
             </div>
             <div className="min-w-0 flex-1 pb-1">

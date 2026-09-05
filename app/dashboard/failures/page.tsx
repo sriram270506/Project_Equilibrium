@@ -109,7 +109,7 @@ export default function FailureConsolePage() {
         sends it to the mock provider. Run the{" "}
         <Link
           href="/dashboard/demo"
-          className="font-medium text-brand-bright hover:underline"
+          className="font-medium text-brand hover:underline"
         >
           guided walkthrough
         </Link>{" "}
@@ -161,7 +161,7 @@ export default function FailureConsolePage() {
                       >
                         <span
                           className={cn(
-                            "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs text-white",
+                            "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs text-ink-strong",
                             result.survived ? "bg-ok" : "bg-danger"
                           )}
                         >
@@ -204,7 +204,7 @@ export default function FailureConsolePage() {
                       </div>
 
                       <div className="rounded-md border-l-2 border-brand bg-brand/[0.12] px-4 py-3">
-                        <p className="text-2xs font-semibold uppercase tracking-wider text-brand-bright">
+                        <p className="text-2xs font-semibold uppercase tracking-wider text-brand">
                           Why this one is hard
                         </p>
                         <p className="mt-1 text-[14px] leading-relaxed text-ink-body">
@@ -228,7 +228,7 @@ export default function FailureConsolePage() {
                           </span>
                           <Link
                             href={`/dashboard/payments/${result.paymentIntentId}`}
-                            className="focusable text-[13px] font-medium text-brand-bright hover:underline"
+                            className="focusable text-[13px] font-medium text-brand hover:underline"
                           >
                             Inspect the payment →
                           </Link>
@@ -248,7 +248,7 @@ export default function FailureConsolePage() {
           The payment sits in UNKNOWN, which is not a dead end — open{" "}
           <Link
             href="/dashboard/reconciliation"
-            className="font-medium text-brand-bright hover:underline"
+            className="font-medium text-brand hover:underline"
           >
             Exceptions
           </Link>{" "}

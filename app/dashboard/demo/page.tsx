@@ -201,7 +201,7 @@ export default function GuidedDemoPage() {
                         "tabular mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold",
                         result && "bg-ok text-white",
                         !result && isRunning && "bg-brand text-white pulse-ring",
-                        !result && !isRunning && isNext && "bg-brand/[0.12] text-brand-bright",
+                        !result && !isRunning && isNext && "bg-brand/[0.12] text-brand",
                         !result && !isRunning && !isNext && "bg-surface-sunken text-ink-muted"
                       )}
                     >
@@ -268,7 +268,7 @@ export default function GuidedDemoPage() {
                           </div>
 
                           <div className="rounded-md border-l-2 border-brand bg-brand/[0.12] px-4 py-3">
-                            <p className="text-2xs font-semibold uppercase tracking-wider text-brand-bright">
+                            <p className="text-2xs font-semibold uppercase tracking-wider text-brand">
                               Why this is hard
                             </p>
                             <p className="mt-1 text-[14px] leading-relaxed text-ink-body">
@@ -279,7 +279,7 @@ export default function GuidedDemoPage() {
                           {result.verifyAt ? (
                             <Link
                               href={result.verifyAt.href}
-                              className="focusable inline-flex items-center gap-1.5 text-[13px] font-medium text-brand-bright hover:underline"
+                              className="focusable inline-flex items-center gap-1.5 text-[13px] font-medium text-brand hover:underline"
                             >
                               {result.verifyAt.label} →
                             </Link>

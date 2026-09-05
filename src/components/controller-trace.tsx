@@ -79,7 +79,7 @@ export function ControllerTrace({
           <div className="text-right">
             <span
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-md",
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
                 stopped
                   ? "border-warn/35 bg-warn/[0.14] text-warn"
                   : "border-ok/35 bg-ok/[0.14] text-ok"
@@ -109,7 +109,7 @@ export function ControllerTrace({
         ) : null}
 
         {/* How much of this outcome is computed vs predicted. */}
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-rule bg-paper-sunken px-4 py-3">
           <span className="text-2xs font-medium uppercase tracking-wider text-ink-muted">
             Evidence mix
           </span>
@@ -136,15 +136,15 @@ export function ControllerTrace({
               <li
                 key={`${call.name}-${i}`}
                 className={cn(
-                  "rounded-lg border bg-white/[0.03] p-4 transition-colors",
+                  "rounded-lg border bg-paper-sunken p-4 transition-colors",
                   halted
                     ? "border-warn/30"
-                    : "border-white/[0.08] hover:border-white/[0.16]"
+                    : "border-rule hover:border-rule-strong"
                 )}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
-                    <span className="tabular mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.06] text-2xs font-semibold text-ink-muted">
+                    <span className="tabular mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-rule-strong bg-paper-tint text-2xs font-semibold text-ink-muted">
                       {i + 1}
                     </span>
                     <div className="min-w-0">
@@ -245,7 +245,7 @@ function IoBlock({
 }) {
   const entries = Object.entries(payload ?? {});
   return (
-    <div className="rounded-md border border-white/[0.07] bg-canvas-deep/60 px-3 py-2">
+    <div className="rounded-md border border-rule bg-canvas-deep/60 px-3 py-2">
       <p className="text-2xs font-medium uppercase tracking-wider text-ink-faint">
         {label}
       </p>

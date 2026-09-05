@@ -111,7 +111,7 @@ export function EventStream({
               "focusable inline-flex items-center gap-2 rounded-full border px-3 py-1 text-2xs font-medium transition-colors",
               live
                 ? "border-ok/35 bg-ok/[0.12] text-ok"
-                : "border-white/[0.14] bg-white/[0.05] text-ink-muted"
+                : "border-rule-strong bg-paper-sunken text-ink-muted"
             )}
           >
             <span
@@ -138,7 +138,7 @@ export function EventStream({
             {events.map((event) => (
               <li
                 key={`${event.sequence}-${event.entryHash.slice(0, 8)}`}
-                className="fade-up flex items-start gap-3 rounded-lg border border-white/[0.06] bg-white/[0.025] px-3 py-2.5 transition-colors hover:border-white/[0.14]"
+                className="fade-up flex items-start gap-3 rounded-lg border border-rule bg-paper-sunken px-3 py-2.5 transition-colors hover:border-rule-strong"
               >
                 <span
                   className={cn(

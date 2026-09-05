@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatPaise } from "@/src/lib/money";
 import Link from "next/link";
+import { PageHeader } from "@/src/components/ui/primitives";
 
 interface Payment {
   id: string;
@@ -53,9 +54,9 @@ export default function PaymentsPage() {
       case "FAILED":
         return "bg-red-100 text-danger";
       case "SUBMITTED":
-        return "bg-blue-100 text-brand-bright";
+        return "bg-blue-100 text-brand";
       default:
-        return "bg-white/[0.06] text-ink-strong";
+        return "bg-paper-tint text-ink-strong";
     }
   };
 
@@ -65,7 +66,10 @@ export default function PaymentsPage() {
 
   return (
     <div className="max-w-6xl">
-      <h1 className="text-3xl font-bold mb-8">Payment Operations</h1>
+      <PageHeader
+        title="Money movement"
+        lede="Every payment end to end: what we instructed, what the provider says happened, the ledger entries behind it, and the hash-chained timeline."
+      />
 
       {error && (
         <div className="bg-danger/[0.10] border border-danger/30 rounded-lg p-4 mb-6 text-danger">
@@ -74,7 +78,7 @@ export default function PaymentsPage() {
       )}
 
       {payments.length === 0 ? (
-        <div className="bg-white/[0.03] border border-white/[0.1] rounded-lg p-12 text-center">
+        <div className="bg-paper-sunken border border-rule rounded-lg p-12 text-center">
           <p className="text-ink-muted">No payments found</p>
         </div>
       ) : (
@@ -82,7 +86,7 @@ export default function PaymentsPage() {
           {payments.map((payment) => (
             <div
               key={payment.id}
-              className="glass backdrop-blur-glass rounded-card p-6 hover:shadow-lg transition-shadow"
+              className="glass  rounded-card p-6 hover:shadow-lg transition-shadow"
             >
               <div className="flex justify-between items-start mb-4">
                 <div>

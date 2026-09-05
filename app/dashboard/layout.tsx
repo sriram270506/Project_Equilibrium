@@ -114,36 +114,41 @@ const SECTIONS: Array<{
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="relative min-h-screen">
-      {/* Aurora sits behind everything and never intercepts a pointer. */}
-      <div className="aurora-field aurora-drift" aria-hidden="true" />
+      {/*
+        Ruled paper behind everything. Fixed and pointer-events-none, so it
+        never intercepts a click.
+      */}
+      <div className="ledger-field ledger-field-console" aria-hidden="true" />
 
       <div className="relative z-10 flex">
-        {/* -------------------------------------------------------- Sidebar */}
-        <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-white/[0.07] bg-canvas-deep/70 backdrop-blur-2xl">
-          <div className="px-5 py-5">
-            <Link href="/" className="focusable group block rounded-lg">
-              <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-ink-strong">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-60" />
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-gradient-to-br from-brand-bright to-cyanAccent" />
-                </span>
-                <span className="transition-colors duration-200 group-hover:text-brand-bright">
-                  Equilibrium
-                </span>
+        {/*
+          ------------------------------------------------------------ Spine
+
+          The one dark surface in the product: Razorpay navy, full height,
+          square-edged. Against warm paper it reads as the bound edge of a
+          ledger, and it gives the interface a strong vertical anchor that a
+          light-on-light sidebar cannot.
+        */}
+        <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col overflow-y-auto bg-brand-deep">
+          <div className="border-b border-white/[0.09] px-5 py-5">
+            <Link href="/" className="focusable group block rounded-[3px]">
+              <h1 className="display flex items-baseline gap-2 text-[22px] leading-none text-white">
+                Equilibrium
               </h1>
-              <p className="mt-1 pl-[18px] text-2xs leading-snug text-ink-faint">
-                Early payments, proven correct
+              <p className="mt-2 text-2xs uppercase tracking-[0.16em] text-brand-bright">
+                Finance controller
               </p>
             </Link>
           </div>
 
-          <nav className="flex-1 space-y-5 px-3 pb-4">
+          <nav className="flex-1 space-y-6 py-5 pl-0 pr-3">
             {SECTIONS.map((section) => (
               <div key={section.heading}>
-                <p className="px-2 pb-2 text-2xs font-semibold uppercase tracking-[0.12em] text-ink-faint">
+                {/* Section label over a rule, as on a printed index. */}
+                <p className="mb-2 ml-3.5 mr-2 border-b border-white/[0.12] pb-1.5 text-2xs font-semibold uppercase tracking-[0.16em] text-white/65">
                   {section.heading}
                 </p>
-                <div className="space-y-0.5">
+                <div className="space-y-px">
                   {section.items.map((item) => (
                     <NavLink
                       key={item.href}
@@ -157,25 +162,32 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             ))}
           </nav>
 
-          <div className="border-t border-white/[0.07] px-5 py-4">
+          <div className="border-t border-white/[0.09] px-5 py-4">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand to-violetAccent text-2xs font-semibold text-white">
+              <span className="flex h-7 w-7 items-center justify-center rounded-[3px] bg-brand-bright text-2xs font-bold text-brand-ink">
                 PR
               </span>
               <div className="min-w-0">
-                <p className="text-2xs font-medium text-ink-body">Priya Raman</p>
-                <p className="text-2xs text-ink-faint">Finance operator</p>
+                <p className="text-2xs font-medium text-white/90">
+                  Priya Raman
+                </p>
+                <p className="text-2xs text-white/65">Finance operator</p>
               </div>
             </div>
-            <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-warn/30 bg-warn/[0.12] px-2.5 py-1 text-2xs font-medium text-warn backdrop-blur-md">
+            {/*
+              A stamp rather than a pill. This is a standing disclosure about
+              what the reader is looking at, and a stamp is the shape that
+              carries that weight.
+            */}
+            <p className="stamp mt-3.5 border-warn/70 text-warn">
               <span className="status-breathe h-1.5 w-1.5 rounded-full bg-warn" />
-              Mock provider · synthetic data
+              Mock provider
             </p>
           </div>
         </aside>
 
         {/* ----------------------------------------------------------- Main */}
-        <main className="min-w-0 flex-1 px-8 py-8">{children}</main>
+        <main className="min-w-0 flex-1 px-10 py-9">{children}</main>
       </div>
     </div>
   );

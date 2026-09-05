@@ -82,12 +82,12 @@ const STATUS_STYLE: Record<string, string> = {
   REJECTED: "border-danger/30 bg-danger/[0.12] text-danger",
   RELINKED: "border-info/30 bg-info/[0.12] text-info",
   MARKED_DUPLICATE: "border-danger/30 bg-danger/[0.12] text-danger",
-  FROZEN: "border-brand/30 bg-brand/[0.12] text-brand-bright",
+  FROZEN: "border-brand/30 bg-brand/[0.12] text-brand",
 };
 
 const KIND_STYLE: Record<string, string> = {
   DETERMINISTIC: "border-info/30 bg-info/[0.10] text-info",
-  STATISTICAL: "border-brand/30 bg-brand/[0.10] text-brand-bright",
+  STATISTICAL: "border-brand/30 bg-brand/[0.10] text-brand",
   POLICY: "border-warn/30 bg-warn/[0.10] text-warn",
 };
 
@@ -200,7 +200,7 @@ export default function Track04ReviewPage() {
             Run one from the{" "}
             <Link
               href="/dashboard/track04"
-              className="font-medium text-brand-bright hover:underline"
+              className="font-medium text-brand hover:underline"
             >
               benchmark page
             </Link>
@@ -283,7 +283,7 @@ export default function Track04ReviewPage() {
                           className={cn(
                             "rounded border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
                             STATUS_STYLE[r.status] ??
-                              "border-white/15 bg-white/[0.05] text-ink-muted"
+                              "border-white/15 bg-paper-sunken text-ink-muted"
                           )}
                         >
                           {r.status.replace(/_/g, " ")}
@@ -333,7 +333,7 @@ export default function Track04ReviewPage() {
                         </p>
                         <div className="mt-2 space-y-1.5">
                           {openRow.evidence.internal ? (
-                            <div className="rounded-md border border-white/[0.10] bg-white/[0.03] px-3 py-2 text-2xs">
+                            <div className="rounded-md border border-rule bg-paper-sunken px-3 py-2 text-2xs">
                               <span className="mono text-info">INTERNAL</span>{" "}
                               <span className="text-ink-body">
                                 {String(openRow.evidence.internal.reference)} ·{" "}
@@ -360,9 +360,9 @@ export default function Track04ReviewPage() {
                             openRow.evidence.externals.map((e, i) => (
                               <div
                                 key={i}
-                                className="rounded-md border border-white/[0.10] bg-white/[0.03] px-3 py-2 text-2xs"
+                                className="rounded-md border border-rule bg-paper-sunken px-3 py-2 text-2xs"
                               >
-                                <span className="mono text-brand-bright">
+                                <span className="mono text-brand">
                                   {String(e.id)}
                                 </span>{" "}
                                 <span className="text-ink-body">
@@ -466,7 +466,7 @@ export default function Track04ReviewPage() {
 
                   {/* The decision itself. */}
                   {openRow.status === "OPEN" ? (
-                    <div className="rounded-lg border border-white/[0.12] bg-white/[0.03] px-4 py-4">
+                    <div className="rounded-lg border border-rule-strong bg-paper-sunken px-4 py-4">
                       <p className="text-[13px] font-medium text-ink-strong">
                         Record a decision
                       </p>
@@ -480,7 +480,7 @@ export default function Track04ReviewPage() {
                           onChange={(e) => setNote(e.target.value)}
                           rows={2}
                           placeholder="Required for everything except a plain acceptance."
-                          className="focusable mt-1 w-full rounded-md border border-white/[0.14] bg-surface-sunken px-3 py-2 text-[13px] text-ink-body placeholder:text-ink-faint"
+                          className="focusable mt-1 w-full rounded-md border border-rule-strong bg-surface-sunken px-3 py-2 text-[13px] text-ink-body placeholder:text-ink-faint"
                         />
                       </label>
 
@@ -492,7 +492,7 @@ export default function Track04ReviewPage() {
                           value={linkedId}
                           onChange={(e) => setLinkedId(e.target.value)}
                           placeholder="ext_0123a"
-                          className="focusable mono mt-1 w-full rounded-md border border-white/[0.14] bg-surface-sunken px-3 py-2 text-[13px] text-ink-body placeholder:text-ink-faint"
+                          className="focusable mono mt-1 w-full rounded-md border border-rule-strong bg-surface-sunken px-3 py-2 text-[13px] text-ink-body placeholder:text-ink-faint"
                         />
                       </label>
 
@@ -515,8 +515,8 @@ export default function Track04ReviewPage() {
                               key === "ACCEPTED"
                                 ? "border-ok/35 bg-ok/[0.12] text-ok"
                                 : key === "FROZEN"
-                                  ? "border-brand/35 bg-brand/[0.12] text-brand-bright"
-                                  : "border-white/[0.16] bg-white/[0.05] text-ink-body"
+                                  ? "border-brand/35 bg-brand/[0.12] text-brand"
+                                  : "border-rule-strong bg-paper-sunken text-ink-body"
                             )}
                           >
                             {spec.label}
@@ -530,7 +530,7 @@ export default function Track04ReviewPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-lg border border-white/[0.12] bg-white/[0.03] px-4 py-3">
+                    <div className="rounded-lg border border-rule-strong bg-paper-sunken px-4 py-3">
                       <p className="text-2xs uppercase tracking-wide text-ink-muted">
                         Decision recorded
                       </p>
@@ -558,14 +558,14 @@ export default function Track04ReviewPage() {
                         type="button"
                         disabled={submitting}
                         onClick={() => act(openRow.id, "REOPEN")}
-                        className="focusable mt-3 rounded-md border border-white/[0.16] bg-white/[0.05] px-3 py-1.5 text-2xs text-ink-body disabled:opacity-50"
+                        className="focusable mt-3 rounded-md border border-rule-strong bg-paper-sunken px-3 py-1.5 text-2xs text-ink-body disabled:opacity-50"
                       >
                         Reopen
                       </button>
                     </div>
                   )}
 
-                  <div className="rounded-lg border border-white/[0.10] bg-white/[0.03] px-4 py-3">
+                  <div className="rounded-lg border border-rule bg-paper-sunken px-4 py-3">
                     <p className="text-2xs uppercase tracking-wide text-ink-muted">
                       Ground truth ({openRow.evidence?.groundTruthLabel})
                     </p>

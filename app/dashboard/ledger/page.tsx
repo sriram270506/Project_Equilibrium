@@ -102,7 +102,7 @@ export default function TrialBalancePage() {
           <div className="flex flex-wrap items-center gap-6">
             <span
               className={cn(
-                "flex h-12 w-12 items-center justify-center rounded-full text-2xl text-white",
+                "flex h-12 w-12 items-center justify-center rounded-full text-2xl text-ink-strong",
                 data.balanced ? "bg-ok" : "bg-danger"
               )}
             >
@@ -199,7 +199,7 @@ export default function TrialBalancePage() {
                           ? "text-ink-muted"
                           : account.netPaise > 0
                             ? "text-ink-strong"
-                            : "text-brand-bright"
+                            : "text-brand"
                       )}
                     >
                       <Money paise={account.netPaise} />

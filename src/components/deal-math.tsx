@@ -52,7 +52,7 @@ export function DealMathCard({
           <div className="mt-2 flex justify-between">
             <div>
               <p className="text-2xs text-ink-muted">Paid today</p>
-              <p className="tabular text-xl font-semibold text-brand-bright">
+              <p className="tabular text-xl font-semibold text-brand">
                 <Money paise={deal.supplierReceivesPaise} />
               </p>
             </div>

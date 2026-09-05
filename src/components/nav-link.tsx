@@ -7,6 +7,12 @@ import { cn } from "@/src/lib/utils";
 /**
  * Sidebar link that knows whether it is the current page. Exact match for the
  * overview so it does not stay lit on every child route.
+ *
+ * These sit on the navy spine, so the colour logic is inverted from the rest
+ * of the app: near-white text on dark, not ink on paper. The active state is a
+ * SOLID left rail plus a lifted background rather than a glow — the spine is
+ * the one dark surface in the product and a glow there would be the only
+ * neon in an otherwise printed interface.
  */
 export function NavLink({
   href,
@@ -26,26 +32,37 @@ export function NavLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "focusable group relative block rounded-lg px-2.5 py-2 transition-all duration-200 ease-spring",
+        "focusable group relative block rounded-[3px] py-2 pl-3.5 pr-2.5 transition-colors duration-150",
         active
-          ? "bg-brand/[0.16] text-ink-strong shadow-[inset_0_1px_0_0_rgb(255_255_255/0.08)]"
-          : "text-ink-muted hover:translate-x-0.5 hover:bg-white/[0.06] hover:text-ink-strong"
+          ? "bg-white/[0.10] text-white"
+          : "text-white/60 hover:bg-white/[0.06] hover:text-white/90"
       )}
     >
-      {/* A lit rail on the active item, so position is readable peripherally. */}
-      {active ? (
-        <span className="absolute inset-y-1.5 left-0 w-[2px] rounded-full bg-gradient-to-b from-brand-bright to-cyanAccent shadow-glow-brand" />
-      ) : null}
-      <span className="flex items-center gap-2 text-[13px] font-medium">
-        {active ? (
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-bright shadow-glow-brand" />
-        ) : (
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-white/[0.14] transition-colors duration-200 group-hover:bg-white/30" />
+      {/*
+        The rail. Razorpay blue, full-height, square — a tab marker in a bound
+        ledger rather than a rounded pill.
+      */}
+      <span
+        className={cn(
+          "absolute inset-y-0 left-0 w-[3px] transition-colors duration-150",
+          active ? "bg-brand-bright" : "bg-transparent"
         )}
+      />
+      <span
+        className={cn(
+          "block text-[13px] leading-tight",
+          active ? "font-semibold" : "font-medium"
+        )}
+      >
         {label}
       </span>
       {hint ? (
-        <span className="mt-0.5 block pl-3.5 text-2xs leading-snug text-ink-faint">
+        <span
+          className={cn(
+            "mt-0.5 block text-2xs leading-snug transition-colors duration-150",
+            active ? "text-white/75" : "text-white/60 group-hover:text-white/80"
+          )}
+        >
           {hint}
         </span>
       ) : null}
